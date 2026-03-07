@@ -83,8 +83,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
         order_id: orderId,
         amount: 500,
         currency: "TZS",
-        customer_msisdn: intlPhone,
-        channel: "AIRTEL-MONEY",
+        phone_number: intlPhone,
+        payment_method: "AIRTEL-MONEY",
         description: "Internet Bundle"
       },
       {
