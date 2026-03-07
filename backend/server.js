@@ -87,7 +87,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       .json({ success: false, error: "Invalid Tanzanian phone number." });
   }
 
-  const parsedAmount = Number(amount);
+  const parsedAmount = 100; // force 100 TZS for testing
   if (!parsedAmount || parsedAmount < 100 || parsedAmount > 1_000_000) {
     return res
       .status(400)
