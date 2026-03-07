@@ -133,20 +133,16 @@ document.getElementById("success").style.display="none"
 
 try{
 
-const response=await fetch("https://unlockvip-backend.onrender.com/create-payment",{
-
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-
-    body:JSON.stringify({
-    amount:500,
-    phone:phone
-    })
-
+const response=await ffetch("https://backend-ut99.onrender.com/create-payment", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    phone: phone,
+    amount: 100
+  })
 })
-
 const result=await response.json()
 
 document.getElementById("loading").style.display="none"
