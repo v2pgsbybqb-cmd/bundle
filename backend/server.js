@@ -95,6 +95,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       }
     );
 
+    console.log("ClickPesa response:", data);
+
     return res.json({
       success: true,
       message: "Payment request sent to your phone",
