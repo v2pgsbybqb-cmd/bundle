@@ -1,0 +1,187 @@
+body{
+background:radial-gradient(circle at top,#0f1117,#020202);
+font-family:Arial;
+color:white;
+text-align:center;
+margin:0;
+padding:20px;
+overflow-x:hidden;
+}
+
+.page-container{
+max-width:1400px;
+margin:auto;
+}
+
+.title{
+font-size:50px;
+margin-top:20px;
+}
+
+.phone-box{
+margin-top:20px;
+}
+
+input{
+padding:12px;
+border-radius:10px;
+border:none;
+width:260px;
+font-size:16px;
+}
+
+.logo{
+width:80px;
+margin-bottom:10px;
+border-radius:10px;
+}
+
+.card-container{
+display:flex;
+justify-content:center;
+gap:60px;
+margin-top:60px;
+flex-wrap:nowrap;
+overflow-x:auto;
+}
+
+.card{
+background:#1a1d24;
+border-radius:20px;
+padding:30px;
+width:300px;
+box-shadow:0 20px 40px rgba(0,0,0,.7);
+position:relative;
+transition:.4s;
+}
+
+.circle{
+width:180px;
+height:180px;
+border-radius:50%;
+margin:auto;
+background:radial-gradient(circle,#ff6a00,#ff2e00);
+display:flex;
+align-items:center;
+justify-content:center;
+}
+
+.bundle h2{
+font-size:38px;
+margin:0;
+}
+
+button{
+margin-top:20px;
+background:#ff3c00;
+border:none;
+padding:12px 28px;
+border-radius:30px;
+color:white;
+cursor:pointer;
+font-weight:bold;
+}
+
+/* 🔥 ULTRA FIRE EFFECT */
+
+.card.active-network .circle{
+
+animation:fire 1s infinite;
+
+box-shadow:
+0 0 20px #ff6a00,
+0 0 40px #ff2e00,
+0 0 80px orange,
+0 0 120px red;
+
+}
+
+@keyframes fire{
+
+0%{
+box-shadow:
+0 0 30px #ff6a00,
+0 0 60px #ff2e00,
+0 0 100px orange;
+}
+
+50%{
+box-shadow:
+0 0 50px #ff6a00,
+0 0 90px #ff2e00,
+0 0 140px orange;
+}
+
+100%{
+box-shadow:
+0 0 30px #ff6a00,
+0 0 60px #ff2e00,
+0 0 100px orange;
+}
+
+}
+
+/* FEATURES */
+
+.features{
+margin-top:100px;
+}
+
+.features-grid{
+display:flex;
+justify-content:center;
+gap:30px;
+flex-wrap:wrap;
+}
+
+.feature-box{
+background:#1a1d24;
+padding:25px;
+border-radius:15px;
+width:220px;
+box-shadow:0 10px 30px rgba(0,0,0,.6);
+}
+
+#loading{
+display:none;
+margin-top:20px;
+}
+
+.spinner{
+border:6px solid #eee;
+border-top:6px solid orange;
+border-radius:50%;
+width:40px;
+height:40px;
+animation:spin 1s linear infinite;
+margin:auto;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg)}
+100%{transform:rotate(360deg)}
+}
+
+#success{
+display:none;
+color:lightgreen;
+margin-top:20px;
+}
+
+/* 📱 MOBILE FIX */
+
+@media (max-width:768px){
+
+.card-container{
+flex-direction:column;
+align-items:center;
+gap:30px;
+overflow-x:hidden;
+}
+
+.card{
+width:90%;
+max-width:350px;
+}
+
+}
