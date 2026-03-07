@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const axios = require("axios");
 
 const app = express();
 
@@ -93,80 +94,76 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       .json({ success: false, error: "Invalid payment amount." });
   }
 
-  const txRef = makeTxRef();
+  const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
 
   try {
-    const flwRes = await fetch(
-      "https://api.flutterwave.com/v3/charges?type=mobile_money_tanzania",
+    const { data } = await axios.post(
+      "https://api.clickpesa.com/third-parties/v2/pay",
       {
-        method: "POST",
+        order_id: orderId,
+        amount: parsedAmount,
+        currency: "TZS",
+        phone_number: intlPhone,
+        description: "Internet Bundle – UnlockVIP",
+      },
+      {
         headers: {
-          Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`,
+          Authorization: `Bearer ${process.env.CLICKPESA_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          phone_number: intlPhone,
-          amount: parsedAmount,
-          currency: "TZS",
-          tx_ref: txRef,
-          // Flutterwave requires an email field; use a placeholder
-          email: "pay@unlockvip.com",
-        }),
       }
     );
 
-    const data = await flwRes.json();
-
-    // Flutterwave returns status "success" when the STK push is dispatched
-    if (
-      data.status === "success" ||
-      (data.message && data.message.toLowerCase().includes("initiated"))
-    ) {
+    // ClickPesa returns { status: "PENDING" } or { status: "SUCCESS" }
+    // when the STK push has been dispatched successfully.
+    if (data.status === "PENDING" || data.status === "SUCCESS") {
       return res.json({
         success: true,
         message: "Payment request sent to your phone. Please confirm.",
-        tx_ref: txRef,
+        order_id: orderId,
       });
     }
 
-    // Gateway returned an error
-    console.error("Flutterwave error response:", JSON.stringify(data));
+    console.error("ClickPesa unexpected response:", JSON.stringify(data));
     return res.status(400).json({
       success: false,
       error: data.message || "Payment could not be initiated.",
     });
   } catch (err) {
-    console.error("Payment processing error:", err.message);
-    return res
-      .status(500)
-      .json({ success: false, error: "Server error. Please try again." });
+    const errData = err.response?.data;
+    console.error("ClickPesa error:", errData || err.message);
+    return res.status(400).json({
+      success: false,
+      error: (errData && errData.message) || "Payment could not be initiated.",
+    });
   }
 });
 
-/* ─── POST /webhook/flutterwave (payment confirmation) ─────── */
-// Flutterwave calls this URL after the customer confirms on their phone.
-// Set this URL in your Flutterwave dashboard → Webhooks.
-app.post("/webhook/flutterwave", express.json(), (req, res) => {
-  const secretHash = process.env.FLW_WEBHOOK_SECRET;
-  const signature = req.headers["verif-hash"];
+/* ─── POST /webhook/clickpesa ───────────────────────────────── */
+// ClickPesa calls this URL after the customer confirms on their phone.
+// Set this URL in your ClickPesa dashboard → Settings → Webhooks.
+app.post("/webhook/clickpesa", (req, res) => {
+  const signature = req.headers["x-clickpesa-signature"];
 
-  // Reject requests that don't carry the secret hash
-  if (!signature || signature !== secretHash) {
+  if (!signature || signature !== process.env.CLICKPESA_WEBHOOK_SECRET) {
+    console.warn("Webhook: invalid signature – request rejected.");
     return res.status(401).end();
   }
 
-  const event = req.body;
-  const { status, tx_ref, amount, currency } = event.data || {};
+  const { event, data } = req.body || {};
+  const { order_id, amount, currency, status } = data || {};
 
-  if (status === "successful") {
-    // TODO: mark the order as paid in your database using tx_ref
-    console.log(`Payment confirmed: ${tx_ref} – ${amount} ${currency}`);
+  if (event === "payment.received" || status === "PAID" || status === "SUCCESS") {
+    console.log(`[webhook] payment.received – order: ${order_id} | ${amount} ${currency}`);
+    // TODO: fulfil the order in your database here
+  } else if (event === "payment.failed" || status === "FAILED") {
+    console.log(`[webhook] payment.failed – order: ${order_id}`);
   } else {
-    console.log(`Payment not successful: ${tx_ref} – status: ${status}`);
+    console.log(`[webhook] unhandled event: ${event || status} – order: ${order_id}`);
   }
 
-  // Always respond 200 so Flutterwave stops retrying
+  // Always respond 200 so ClickPesa stops retrying
   res.status(200).end();
 });
 
