@@ -92,7 +92,11 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       }
     );
 
-    return res.json({ success:true, data });
+    return res.json({
+      success: true,
+      message: "Payment request sent to your phone",
+      payment: data
+    });
 
   } catch(err) {
 
