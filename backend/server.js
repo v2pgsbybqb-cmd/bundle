@@ -79,17 +79,11 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       "https://api.clickpesa.com/third-parties/v2/pay",
       {
         order_id: orderId,
-        amount: 100,
+        amount: 500,
         currency: "TZS",
+        phone_number: intlPhone,
         channel: "AIRTEL-MONEY",
-        description: "Internet Bundle",
-        customer: {
-          phone_number: intlPhone
-        },
-        metadata: {
-          source: "unlockvip",
-          bundle: "23GB"
-        }
+        description: "Internet Bundle"
       },
       {
         headers: {
