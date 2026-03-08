@@ -359,7 +359,7 @@ body::after {
 
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(108,99,255,.45);
   border-radius: 24px;
   padding: 36px 28px;
   width: 300px;
@@ -370,6 +370,7 @@ body::after {
   position: relative;
   transition: transform .3s, box-shadow .3s, border-color .3s;
   cursor: default;
+  box-shadow: 0 0 0 1px rgba(108,99,255,.25), 0 20px 50px rgba(108,99,255,.15);
 }
 
 .card:hover {
