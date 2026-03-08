@@ -55,7 +55,7 @@ function toInternational(phone) {
 }
 
 function makeTxRef() {
-  return `UVP-${Date.now()}-${Math.random().toString(36).substring(2,8).toUpperCase()}`;
+  return `UVP${Date.now()}${Math.random().toString(36).substring(2,8).toUpperCase()}`;
 }
 
 /* Create payment */
