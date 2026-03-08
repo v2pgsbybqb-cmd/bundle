@@ -62,7 +62,7 @@ function makeTxRef() {
 
 /* Create payment */
 app.post("/create-payment", paymentLimiter, async (req, res) => {
-  const { phone } = req.body;
+  const { phone, amount } = req.body;
 
   if (!phone || typeof phone !== "string") {
     return res.status(400).json({ success:false, error:"Phone required" });
@@ -74,11 +74,16 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     return res.status(400).json({ success:false, error:"Invalid phone" });
   }
 
+  const parsedAmount = Number(amount);
+  if (!parsedAmount || parsedAmount < 100) {
+    return res.status(400).json({ success:false, error:"Invalid amount" });
+  }
+
   const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
 
   const payload = {
-    amount: "500",
+    amount: parsedAmount,
     currency: "TZS",
     orderReference: orderId,
     phoneNumber: intlPhone,
