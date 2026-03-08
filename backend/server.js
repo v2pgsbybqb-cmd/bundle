@@ -119,12 +119,6 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 /* Webhook */
 app.post("/webhook/clickpesa", (req,res)=>{
 
-  const signature = req.headers["x-clickpesa-signature"];
-
-  if(signature !== process.env.CLICKPESA_WEBHOOK_SECRET){
-    return res.status(401).end();
-  }
-
   console.log("Webhook event:", req.body);
 
   res.status(200).end();
