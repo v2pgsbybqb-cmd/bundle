@@ -19,11 +19,50 @@
 html { scroll-behavior: smooth; }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 12% 10%, rgba(108,99,255,.22) 0%, transparent 32%),
+    radial-gradient(circle at 88% 20%, rgba(0,212,255,.16) 0%, transparent 36%),
+    radial-gradient(circle at 50% 100%, rgba(108,99,255,.12) 0%, transparent 42%),
+    linear-gradient(160deg, #060a13 0%, #080d19 55%, #070b14 100%);
+  background-attachment: fixed;
   font-family: var(--font);
   color: var(--text);
   overflow-x: hidden;
   min-height: 100vh;
+  position: relative;
+  isolation: isolate;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 80%, rgba(0,212,255,.14) 0%, transparent 35%),
+    radial-gradient(circle at 85% 25%, rgba(108,99,255,.15) 0%, transparent 38%),
+    conic-gradient(from 210deg at 50% 50%, rgba(255,255,255,.04), transparent 45%, rgba(255,255,255,.03), transparent 85%);
+  opacity: .65;
+  pointer-events: none;
+  z-index: -2;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  width: 60vw;
+  height: 60vw;
+  top: -18vw;
+  left: -12vw;
+  background: radial-gradient(circle, rgba(108,99,255,.24) 0%, transparent 62%);
+  filter: blur(18px);
+  pointer-events: none;
+  animation: driftGlow 16s ease-in-out infinite alternate;
+  z-index: -1;
+}
+
+@keyframes driftGlow {
+  0% { transform: translate(0, 0) scale(1); opacity: .85; }
+  100% { transform: translate(6vw, 4vh) scale(1.08); opacity: .55; }
 }
 
 /* ── NAVBAR ───────────────────────────────────────────────── */
@@ -68,17 +107,37 @@ body {
   text-align: center;
   padding: 100px 20px 80px;
   overflow: hidden;
+  background:
+    linear-gradient(rgba(7,11,20,0.75), rgba(7,11,20,0.95)),
+    url("images/hero-bg.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
-.hero-glow {
+.hero::before {
+  content: "";
   position: absolute;
-  top: -120px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 700px;
-  height: 700px;
-  background: radial-gradient(circle, rgba(108,99,255,.18) 0%, transparent 70%);
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(108,99,255,.18) 0%, transparent 70%);
   pointer-events: none;
+}
+
+.hero::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 140px;
+  background: linear-gradient(180deg, rgba(7,11,20,0) 0%, rgba(13,19,33,.96) 100%);
+  pointer-events: none;
+}
+
+.hero > * {
+  position: relative;
+  z-index: 2;
 }
 
 .hero-label {
@@ -129,26 +188,39 @@ body {
   align-items: center;
   gap: 10px;
   background: var(--surface2);
-  border: 1px solid var(--border);
+  border: 2px solid rgba(255,255,255,0.14);
   border-radius: 50px;
-  padding: 10px 20px;
+  padding: 14px 24px;
   width: 100%;
-  max-width: 380px;
-  transition: border-color .25s, box-shadow .25s;
-}
-.phone-field:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(108,99,255,.2);
+  max-width: 460px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.28);
+  transition: border-color .25s, box-shadow .25s, transform .25s;
 }
 
-.phone-icon { font-size: 18px; }
+.phone-field:hover {
+  border-color: rgba(108,99,255,.5);
+  box-shadow: 0 0 0 3px rgba(108,99,255,.18), 0 18px 38px rgba(0,0,0,.36);
+  transform: translateY(-1px);
+}
+
+.phone-field:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 4px rgba(108,99,255,.25),
+    0 0 28px rgba(108,99,255,.35),
+    0 16px 34px rgba(0,0,0,.34);
+}
+
+.phone-icon { font-size: 21px; }
 
 .phone-field input {
   background: none;
   border: none;
   outline: none;
   color: #fff;
-  font-size: 16px;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: .2px;
   flex: 1;
   font-family: var(--font);
 }
@@ -225,7 +297,55 @@ body {
 }
 
 /* ── BUNDLE CARDS ─────────────────────────────────────────── */
-.cards-section { padding: 80px 20px; }
+.cards-section {
+  position: relative;
+  padding: 90px 20px;
+  overflow: hidden;
+  margin-top: -1px;
+  background:
+    radial-gradient(circle at 12% 20%, rgba(0,212,255,.1), transparent 35%),
+    radial-gradient(circle at 88% 80%, rgba(108,99,255,.16), transparent 40%),
+    linear-gradient(180deg, rgba(13,19,33,.96) 0%, rgba(9,14,25,.96) 100%);
+  background-attachment: fixed;
+}
+
+.cards-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 75%, rgba(0,212,255,.13) 0%, transparent 36%),
+    radial-gradient(circle at 82% 30%, rgba(108,99,255,.16) 0%, transparent 38%),
+    conic-gradient(from 220deg at 50% 50%, rgba(255,255,255,.04), transparent 42%, rgba(255,255,255,.03), transparent 85%);
+  opacity: .6;
+  pointer-events: none;
+}
+
+.cards-section > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cards-section .section-title,
+.cards-section .section-sub,
+.cards-section .card {
+  opacity: 0;
+  transform: translateY(34px);
+  transition: opacity .65s ease, transform .65s ease;
+}
+
+.cards-section.in-view .section-title,
+.cards-section.in-view .section-sub,
+.cards-section.in-view .card {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.cards-section.in-view .section-title { transition-delay: .05s; }
+.cards-section.in-view .section-sub { transition-delay: .14s; }
+.cards-section.in-view .card:nth-child(1) { transition-delay: .24s; }
+.cards-section.in-view .card:nth-child(2) { transition-delay: .34s; }
+.cards-section.in-view .card:nth-child(3) { transition-delay: .44s; }
 
 .card-container {
   display: flex;
@@ -406,7 +526,8 @@ body {
 /* ── HOW IT WORKS ─────────────────────────────────────────── */
 .how-section {
   padding: 80px 20px;
-  background: var(--surface);
+  background: rgba(13, 19, 33, 0.68);
+  backdrop-filter: blur(2px);
 }
 
 .steps {
@@ -476,7 +597,11 @@ body {
 .live-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
 
 /* ── TRUST ────────────────────────────────────────────────── */
-.trust-section { padding: 80px 20px; background: var(--surface); }
+.trust-section {
+  padding: 80px 20px;
+  background: rgba(13, 19, 33, 0.68);
+  backdrop-filter: blur(2px);
+}
 
 .trust-grid {
   display: flex;
@@ -563,4 +688,14 @@ body {
   .live-box { width: calc(50% - 6px); }
   .trust-grid { gap: 12px; }
   .trust-card { width: calc(50% - 6px); padding: 22px 14px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cards-section .section-title,
+  .cards-section .section-sub,
+  .cards-section .card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }

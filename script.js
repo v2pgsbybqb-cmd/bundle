@@ -137,3 +137,28 @@ setTimeout(() => {
   fakePurchase();
   setInterval(fakePurchase, rnd(7000, 12000));
 }, 6000);
+
+/* ── CHOOSE NETWORK SLIDE-IN ─────────────────────────────── */
+const bundlesSection = document.getElementById("bundles");
+
+if (bundlesSection) {
+  const revealBundles = () => bundlesSection.classList.add("in-view");
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            revealBundles();
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+    observer.observe(bundlesSection);
+  } else {
+    // Fallback for older browsers
+    revealBundles();
+  }
+}
