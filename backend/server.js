@@ -80,7 +80,6 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     amount: 500,
     currency: "TZS",
     customerMsisdn: intlPhone,
-    channel: "AIRTEL",
     description: "Internet Bundle"
   };
 
@@ -90,7 +89,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   try {
 
     const { data, status: httpStatus } = await axios.post(
-      "https://api.clickpesa.com/third-parties/v2/create-payment",
+      "https://api.clickpesa.com/third-parties/v2/ussd-push",
       payload,
       {
         headers: {
