@@ -671,24 +671,123 @@ body::after {
 
 /* ── RESPONSIVE ───────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .navbar { padding: 14px 20px; }
-  .nav-links { gap: 18px; }
+  .navbar {
+    padding: 14px 16px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .nav-logo { font-size: 20px; }
+  .nav-links {
+    width: 100%;
+    justify-content: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
   .nav-links a { font-size: 13px; }
-  .hero { padding: 70px 16px 60px; }
-  .card-container { gap: 20px; }
-  .card { width: min(300px, 90vw); }
+
+  .hero {
+    padding: 70px 16px 56px;
+    background-attachment: scroll;
+  }
+  .hero h1 { line-height: 1.2; }
+  .hero-sub {
+    font-size: 15px;
+    margin-bottom: 28px;
+  }
+
+  .phone-field {
+    max-width: 100%;
+    padding: 12px 18px;
+  }
+  .phone-field input {
+    font-size: 17px;
+  }
+
+  .cards-section {
+    padding: 74px 14px;
+    background-attachment: scroll;
+  }
+  .card-container { gap: 16px; }
+  .card {
+    width: 100%;
+    max-width: 340px;
+    padding: 28px 20px;
+  }
+
+  .how-section,
+  .live-section,
+  .trust-section {
+    padding: 68px 14px;
+  }
+
   .steps { gap: 10px; }
   .step { width: 140px; padding: 20px 16px; }
   .step-arrow { display: none; }
-  .live-box { width: 140px; }
-  .trust-card { width: 160px; }
+  .live-box { width: calc(50% - 8px); min-width: 140px; }
+  .trust-card { width: calc(50% - 8px); min-width: 150px; }
+
+  .toast {
+    max-width: calc(100vw - 24px);
+    white-space: normal;
+    text-align: center;
+    border-radius: 14px;
+    padding: 10px 14px;
+    line-height: 1.35;
+  }
 }
 
 @media (max-width: 480px) {
+  body { background-attachment: scroll; }
+
+  .hero { padding: 56px 12px 48px; }
+  .hero-label {
+    font-size: 11px;
+    padding: 5px 12px;
+  }
+
+  .section-title { font-size: 26px; }
+  .section-sub {
+    font-size: 14px;
+    margin-bottom: 34px;
+  }
+
+  .phone-field {
+    border-radius: 16px;
+    padding: 11px 14px;
+  }
+  .phone-field input { font-size: 16px; }
+
+  .status-loading,
+  .status-success,
+  .status-error {
+    max-width: calc(100vw - 24px);
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .card { max-width: 100%; }
+  .badge-ring {
+    width: 145px;
+    height: 145px;
+  }
+
+  .step {
+    width: 100%;
+    max-width: 320px;
+  }
+
   .live-grid { gap: 12px; }
-  .live-box { width: calc(50% - 6px); }
+  .live-box {
+    width: calc(50% - 6px);
+    padding: 18px 10px;
+  }
+
   .trust-grid { gap: 12px; }
-  .trust-card { width: calc(50% - 6px); padding: 22px 14px; }
+  .trust-card {
+    width: calc(50% - 6px);
+    min-width: 0;
+    padding: 22px 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
