@@ -78,7 +78,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   try {
 
     const { data } = await axios.post(
-      "https://api.clickpesa.com/third-parties/v2/pay",
+      "https://api.clickpesa.com/third-parties/v2/payments",
       {
         order_id: orderId,
         amount: 500,
