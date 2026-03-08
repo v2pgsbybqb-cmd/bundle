@@ -55,7 +55,9 @@ function toInternational(phone) {
 }
 
 function makeTxRef() {
-  return `UVP${Date.now()}${Math.random().toString(36).substring(2,8).toUpperCase()}`;
+  const random = Math.random().toString(36).substring(2,8).toUpperCase(); // 6 chars
+  const time = Date.now().toString().slice(-10); // last 10 digits of timestamp
+  return `UVP${time}${random}`.slice(0,20); // ensure max length 20
 }
 
 /* Create payment */
