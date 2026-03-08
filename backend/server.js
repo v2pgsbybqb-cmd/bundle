@@ -90,7 +90,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   try {
 
     const { data, status: httpStatus } = await axios.post(
-      "https://api.clickpesa.com/third-parties/v2/ussd-push",
+      "https://api.clickpesa.com/third-parties/v2/create-payment",
       payload,
       {
         headers: {
