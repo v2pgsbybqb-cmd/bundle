@@ -77,7 +77,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const payload = {
     orderId: orderId,
-    amount: "500",
+    amount: 500,
     currency: "TZS",
     customerMsisdn: intlPhone,
     description: "Internet Bundle"
@@ -102,13 +102,24 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     console.log("ClickPesa HTTP status:", httpStatus);
     console.log("ClickPesa response payload:", JSON.stringify(data));
 
-    // ClickPesa returns { status: "PENDING" } on success
+    // Health-check response means ClickPesa rejected the request (wrong endpoint or bad payload)
+    const isHealthCheck = data.version && data.status === "up";
+    if (isHealthCheck) {
+      console.error("ClickPesa returned health-check – payload or endpoint rejected");
+      return res.status(400).json({ success: false, error: "Payment gateway rejected the request." });
+    }
+
+    // ClickPesa echoes back the payload with a unique `name` when the USSD push is queued
+    // e.g. {"name":"clickpesa-core-XXXXXX","amount":500,"currency":"TZS","customerMsisdn":"255..."}
+    const isEchoSuccess = data.amount && data.customerMsisdn;
+
     if (
       data.status === "PENDING" ||
       data.status === "SUCCESS" ||
       data.status === "success" ||
       data.message?.toLowerCase().includes("success") ||
-      data.message?.toLowerCase().includes("pending")
+      data.message?.toLowerCase().includes("pending") ||
+      isEchoSuccess
     ) {
       return res.json({
         success: true,
