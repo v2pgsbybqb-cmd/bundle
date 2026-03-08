@@ -54,6 +54,25 @@ function toInternational(phone) {
   return clean.startsWith("0") ? "255" + clean.slice(1) : clean;
 }
 
+function detectChannel(phone) {
+  const clean = phone.replace(/\s+/g, "");
+  const local = clean.startsWith("255") ? `0${clean.slice(3)}` : clean;
+
+  if (local.startsWith("068") || local.startsWith("069") || local.startsWith("078")) {
+    return "AIRTEL-MONEY";
+  }
+
+  if (local.startsWith("074") || local.startsWith("075") || local.startsWith("076")) {
+    return "TIGO-PESA";
+  }
+
+  if (local.startsWith("062")) {
+    return "HALOPESA";
+  }
+
+  return null;
+}
+
 function makeTxRef() {
   const random = Math.random().toString(36).substring(2,8).toUpperCase(); // 6 chars
   const time = Date.now().toString().slice(-10); // last 10 digits of timestamp
@@ -81,13 +100,21 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
+  const channel = detectChannel(cleanPhone);
+
+  if (!channel) {
+    return res.status(400).json({
+      success: false,
+      error: "Unsupported network prefix. Use Halotel (062), YAS (074/075/076), or Airtel (068/069/078)."
+    });
+  }
 
   const payload = {
     amount: parsedAmount,
     currency: "TZS",
     orderReference: orderId,
     phoneNumber: intlPhone,
-    channel: "AIRTEL-MONEY"
+    channel
   };
 
   console.log("Sending to ClickPesa:", JSON.stringify(payload));
@@ -108,6 +135,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     );
 
     const token = tokenResponse.data.token;
+    const authToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
     // 2. Initiate USSD push request
     const { data, status: httpStatus } = await axios.post(
@@ -115,7 +143,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       payload,
       {
         headers: {
-          Authorization: token,
+          Authorization: authToken,
           "Content-Type": "application/json"
         }
       }
