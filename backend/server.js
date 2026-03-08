@@ -76,11 +76,11 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   const intlPhone = toInternational(cleanPhone);
 
   const payload = {
-    orderId: orderId,
-    amount: 500,
+    amount: "500",
     currency: "TZS",
-    customerMsisdn: intlPhone,
-    description: "Internet Bundle"
+    orderReference: orderId,
+    phoneNumber: intlPhone,
+    channel: "AIRTEL-MONEY"
   };
 
   console.log("Sending to ClickPesa:", JSON.stringify(payload));
@@ -88,12 +88,27 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   try {
 
+    // 1. Generate ClickPesa token
+    const tokenResponse = await axios.post(
+      "https://api.clickpesa.com/third-parties/generate-token",
+      {},
+      {
+        headers: {
+          "client-id": process.env.CLICKPESA_CLIENT_ID,
+          "api-key": process.env.CLICKPESA_API_KEY
+        }
+      }
+    );
+
+    const token = tokenResponse.data.token;
+
+    // 2. Initiate USSD push request
     const { data, status: httpStatus } = await axios.post(
-      "https://api.clickpesa.com/third-parties/v2/ussd-push",
+      "https://api.clickpesa.com/third-parties/payments/initiate-ussd-push-request",
       payload,
       {
         headers: {
-          Authorization: `Bearer ${process.env.CLICKPESA_API_KEY}`,
+          Authorization: token,
           "Content-Type": "application/json"
         }
       }
@@ -111,7 +126,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
     // ClickPesa echoes back the payload with a unique `name` when the USSD push is queued
     // e.g. {"name":"clickpesa-core-XXXXXX","amount":500,"currency":"TZS","customerMsisdn":"255..."}
-    const isEchoSuccess = data.amount && data.customerMsisdn;
+    const isEchoSuccess = data.status === "PROCESSING" || data.id;
 
     if (
       data.status === "PENDING" ||
