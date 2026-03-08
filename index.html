@@ -1,219 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
-
-
-<!-- Mirrored from unlockvip-frontend.onrender.com/ by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 07 Mar 2026 14:16:31 GMT -->
-<!-- Added by HTTrack --><meta http-equiv="content-type" content="text/html;charset=utf-8" /><!-- /Added by HTTrack -->
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Internet Bundles</title>
-
-<link rel="stylesheet" href="style.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BundleTZ — Internet Bundles Tanzania</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-
 <body>
 
-<div class="page-container">
-
-<h1 class="title">Experience The Future</h1>
-
-<div class="phone-box">
-<p>Enter Phone Number</p>
-<input id="phone" placeholder="07XXXXXXXX">
-</div>
-
-<div id="loading">
-<div class="spinner"></div>
-<p>Processing payment request...</p>
-</div>
-
-<div id="success">
-✅ Payment request sent to your phone.
-Please confirm the payment.
-</div>
-
-<div class="card-container">
-
-<div class="card" data-network="halotel">
-
-<h3>HALOTEL</h3>
-<img src="images/halotel.jpg" class="logo">
-
-<div class="circle">
-<div class="bundle">
-<h2>23GB</h2>
-<p>100 TSH</p>
-<span>VALID FOR 3 MONTHS</span>
-</div>
-</div>
-
-<button onclick="buy()">Buy Now</button>
-
-</div>
-
-
-<div class="card" data-network="yas">
-
-<h3>YAS</h3>
-<img src="images/yas.jpg" class="logo">
-
-<div class="circle">
-<div class="bundle">
-<h2>23GB</h2>
-<p>100 TSH</p>
-<span>VALID FOR 3 MONTHS</span>
-</div>
-</div>
-
-<button onclick="buy()">Buy Now</button>
-
-</div>
-
-
-<div class="card" data-network="airtel">
-
-<h3>AIRTEL</h3>
-<img src="images/airtel.jpg" class="logo">
-
-<div class="circle">
-<div class="bundle">
-<h2>23GB</h2>
-<p>100 TSH</p>
-<span>VALID FOR 3 MONTHS</span>
-</div>
-</div>
-
-<button onclick="buy()">Buy Now</button>
-
-</div>
-
-</div>
-
-
-<section class="features">
-
-<h2>📊 Live Network Activity</h2>
-
-<div class="features-grid">
-
-<div id="usersOnline" class="feature-box">Users Online: 0</div>
-
-<div id="networkSpeed" class="feature-box">Network Speed: -- Mbps</div>
-
-<div id="bundlesSold" class="feature-box">Bundles Today: 1200</div>
-
-<div id="networkLoad" class="feature-box">Network Load: 70%</div>
-
-</div>
-
-</section>
-
-</div>
-
-
-<script>
-
-/* PAYMENT */
-
-async function buy(){
-
-const phone=document.getElementById("phone").value
-
-if(!phone){
-alert("Enter phone number")
-return
-}
-
-document.getElementById("loading").style.display="block"
-document.getElementById("success").style.display="none"
-
-try{
-
-const response=await fetch("https://backend-ut99.onrender.com/create-payment", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    phone: phone,
-    amount: 100
-  })
-})
-const result=await response.json()
-
-document.getElementById("loading").style.display="none"
-
-if(result.success){
-document.getElementById("success").style.display="block"
-}else{
-alert(result.error||"Payment failed")
-}
-
-}catch(error){
-
-document.getElementById("loading").style.display="none"
-alert("Server error")
-
-}
-
-}
-
-
-/* NETWORK AUTO DETECT */
-
-const phoneInput=document.getElementById("phone")
-const cards=document.querySelectorAll(".card")
-
-phoneInput.addEventListener("input",()=>{
-
-const number=phoneInput.value
-
-cards.forEach(card=>{
-card.classList.remove("active-network")
-})
-
-if(number.startsWith("062")){
-activate("halotel")
-}
-
-else if(
-number.startsWith("074") ||
-number.startsWith("075") ||
-number.startsWith("076")
-){
-activate("yas")
-}
-
-else if(
-number.startsWith("068") ||
-number.startsWith("069")
-){
-activate("airtel")
-}
-
-})
-
-function activate(network){
-
-cards.forEach(card=>{
-
-if(card.dataset.network===network){
-card.classList.add("active-network")
-}
-
-})
-
-}
-
-</script>
-
-<script src="frontend-features.js"></script>
-
+  <!-- ── NAVBAR ─────────────────────────────────────── -->
+  <nav class="navbar">
+    <div class="nav-logo">Bundle<span>TZ</span></div>
+    <ul class="nav-links">
+      <li><a href="#bundles">Bundles</a></li>
+      <li><a href="#how">How It Works</a></li>
+      <li><a href="#trust">Why Us</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── HERO ───────────────────────────────────────── -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <p class="hero-label">Tanzania's #1 Data Bundle Platform</p>
+    <h1>Buy Internet Bundles<br><span>Instantly &amp; Securely</span></h1>
+    <p class="hero-sub">23GB for just 3,000 TSH — valid 3 months. Pay via mobile money in seconds.</p>
+
+    <!-- Phone input -->
+    <div class="phone-wrap">
+      <div class="phone-field">
+        <span class="phone-icon">📱</span>
+        <input id="phone" type="tel" placeholder="07XXXXXXXX" maxlength="10" autocomplete="off" />
+        <span id="network-badge" class="network-badge"></span>
+      </div>
+    </div>
+
+    <!-- Status messages -->
+    <div id="loading" class="status-loading">
+      <div class="spinner"></div>
+      <span>Processing payment request…</span>
+    </div>
+    <div id="success" class="status-success">
+      ✅ Payment request sent! Check your phone and confirm.
+    </div>
+    <div id="error-msg" class="status-error"></div>
+  </section>
+
+  <!-- ── BUNDLE CARDS ──────────────────────────────── -->
+  <section class="cards-section" id="bundles">
+    <h2 class="section-title">Choose Your Network</h2>
+    <p class="section-sub">All bundles include 23GB · 3,000 TSH · Valid 3 months</p>
+
+    <div class="card-container">
+
+      <!-- HALOTEL -->
+      <div class="card" data-network="halotel">
+        <div class="card-header">
+          <img src="images/halotel.jpg" alt="Halotel" class="net-logo" />
+          <h3>HALOTEL</h3>
+        </div>
+        <div class="badge-ring">
+          <div class="badge-inner">
+            <span class="gb">23<sub>GB</sub></span>
+            <span class="validity">VALID 3 MONTHS</span>
+          </div>
+        </div>
+        <div class="card-price">3,000 <span>TSH</span></div>
+        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
+      </div>
+
+      <!-- YAS -->
+      <div class="card card-featured" data-network="yas">
+        <div class="popular-tag">Most Popular</div>
+        <div class="card-header">
+          <img src="images/yas.jpg" alt="YAS" class="net-logo" />
+          <h3>YAS</h3>
+        </div>
+        <div class="badge-ring">
+          <div class="badge-inner">
+            <span class="gb">23<sub>GB</sub></span>
+            <span class="validity">VALID 3 MONTHS</span>
+          </div>
+        </div>
+        <div class="card-price">3,000 <span>TSH</span></div>
+        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
+      </div>
+
+      <!-- AIRTEL -->
+      <div class="card" data-network="airtel">
+        <div class="card-header">
+          <img src="images/airtel.jpg" alt="Airtel" class="net-logo" />
+          <h3>AIRTEL</h3>
+        </div>
+        <div class="badge-ring">
+          <div class="badge-inner">
+            <span class="gb">23<sub>GB</sub></span>
+            <span class="validity">VALID 3 MONTHS</span>
+          </div>
+        </div>
+        <div class="card-price">3,000 <span>TSH</span></div>
+        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ──────────────────────────────── -->
+  <section class="how-section" id="how">
+    <h2 class="section-title">How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Enter Number</h4>
+        <p>Type your mobile number above</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Pick Bundle</h4>
+        <p>Select your network card</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Confirm Payment</h4>
+        <p>Approve the mobile money prompt</p>
+      </div>
+      <div class="step-arrow">→</div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <h4>Done!</h4>
+        <p>Data activated instantly</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── LIVE ACTIVITY ─────────────────────────────── -->
+  <section class="live-section">
+    <h2 class="section-title">📊 Live Network Activity</h2>
+    <div class="live-grid">
+      <div class="live-box">
+        <div class="live-icon">👥</div>
+        <div id="usersOnline" class="live-value">—</div>
+        <div class="live-label">Users Online</div>
+      </div>
+      <div class="live-box">
+        <div class="live-icon">⚡</div>
+        <div id="networkSpeed" class="live-value">—</div>
+        <div class="live-label">Network Speed</div>
+      </div>
+      <div class="live-box">
+        <div class="live-icon">📦</div>
+        <div id="bundlesSold" class="live-value">—</div>
+        <div class="live-label">Bundles Today</div>
+      </div>
+      <div class="live-box">
+        <div class="live-icon">📡</div>
+        <div id="networkLoad" class="live-value">—</div>
+        <div class="live-label">Network Load</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── TRUST ─────────────────────────────────────── -->
+  <section class="trust-section" id="trust">
+    <h2 class="section-title">Why Choose BundleTZ</h2>
+    <div class="trust-grid">
+      <div class="trust-card">
+        <div class="trust-icon">⚡</div>
+        <h4>Instant Activation</h4>
+        <p>Bundle active within seconds of payment</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🔒</div>
+        <h4>Secure Payments</h4>
+        <p>Powered by ClickPesa encrypted gateway</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">🌍</div>
+        <h4>All Networks</h4>
+        <p>Halotel, YAS, Airtel — all covered</p>
+      </div>
+      <div class="trust-card">
+        <div class="trust-icon">📞</div>
+        <h4>24/7 Support</h4>
+        <p>We're here whenever you need help</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ─────────────────────────────────────── -->
+  <footer class="footer">
+    <div class="footer-logo">Bundle<span>TZ</span></div>
+    <p>© 2026 BundleTZ — All rights reserved</p>
+    <p class="footer-sub">Powered by ClickPesa Secure Payments</p>
+  </footer>
+
+  <!-- ── TOAST NOTIFICATION ─────────────────────────── -->
+  <div id="toast" class="toast"></div>
+
+  <script src="script.js"></script>
 </body>
-
-<!-- Mirrored from unlockvip-frontend.onrender.com/ by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 07 Mar 2026 14:16:35 GMT -->
 </html>
