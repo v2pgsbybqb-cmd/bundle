@@ -2,6 +2,22 @@
 
 const BACKEND = "https://backend-ut99.onrender.com";
 
+const sendRequestBtn = document.getElementById("send-request-btn");
+
+if (sendRequestBtn) {
+  sendRequestBtn.addEventListener("click", () => buy(sendRequestBtn));
+}
+
+// Block Enter on phone input so requests are sent only via the dedicated button.
+const phoneInput = document.getElementById("phone");
+if (phoneInput) {
+  phoneInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+    }
+  });
+}
+
 async function buy(btn) {
   const phone = document.getElementById("phone").value.trim();
 
@@ -62,7 +78,6 @@ function showToast(msg) {
 }
 
 /* ── PHONE PREFIX DETECTION ──────────────────────────────── */
-const phoneInput = document.getElementById("phone");
 const cards = document.querySelectorAll(".card");
 const badge = document.getElementById("network-badge");
 
@@ -138,27 +153,3 @@ setTimeout(() => {
   setInterval(fakePurchase, rnd(7000, 12000));
 }, 6000);
 
-/* ── CHOOSE NETWORK SLIDE-IN ─────────────────────────────── */
-const bundlesSection = document.getElementById("bundles");
-
-if (bundlesSection) {
-  const revealBundles = () => bundlesSection.classList.add("in-view");
-
-  if ("IntersectionObserver" in window) {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            revealBundles();
-            observer.disconnect();
-          }
-        });
-      },
-      { threshold: 0.2 }
-    );
-    observer.observe(bundlesSection);
-  } else {
-    // Fallback for older browsers
-    revealBundles();
-  }
-}

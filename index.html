@@ -12,7 +12,6 @@
   <nav class="navbar">
     <div class="nav-logo">Bundle<span>TZ</span></div>
     <ul class="nav-links">
-      <li><a href="#bundles">Bundles</a></li>
       <li><a href="#how">How It Works</a></li>
       <li><a href="#trust">Why Us</a></li>
     </ul>
@@ -25,12 +24,22 @@
     <p class="hero-sub">23GB for just 3,000 TSH — valid 3 months. Pay via mobile money in seconds.</p>
 
     <!-- Phone input -->
+    <!-- Instructions -->
+    <p class="input-instruction">
+      Ingiza namba yako hapa chini kisha bonyeza <strong>Nunua Bundle</strong> kupata bundle yako.
+    </p>
     <div class="phone-wrap">
       <div class="phone-field">
         <span class="phone-icon">📱</span>
         <input id="phone" type="tel" placeholder="07XXXXXXXX" maxlength="10" autocomplete="off" />
         <span id="network-badge" class="network-badge"></span>
       </div>
+    </div>
+
+    <!-- Auto network purchase button -->
+    <div class="auto-buy" id="main-request-cta">
+      <button id="send-request-btn" class="buy-btn main-buy" type="button">Nunua Bundle</button>
+      <p class="auto-note">Network detected automatically. Just enter your number and tap Nunua Bundle.</p>
     </div>
 
     <!-- Status messages -->
@@ -42,67 +51,6 @@
       ✅ Payment request sent! Check your phone and confirm.
     </div>
     <div id="error-msg" class="status-error"></div>
-  </section>
-
-  <!-- ── BUNDLE CARDS ──────────────────────────────── -->
-  <section class="cards-section" id="bundles">
-    <h2 class="section-title">Choose Your Network</h2>
-    <p class="section-sub">All bundles include 23GB · 3,000 TSH · Valid 3 months</p>
-
-    <div class="card-container">
-
-      <!-- HALOTEL -->
-      <div class="card" data-network="halotel">
-        <div class="popular-tag">Most Popular</div>
-        <div class="card-header">
-          <img src="images/halotel.jpg" alt="Halotel" class="net-logo" />
-          <h3>HALOTEL</h3>
-        </div>
-        <div class="badge-ring">
-          <div class="badge-inner">
-            <span class="gb">23<sub>GB</sub></span>
-            <span class="validity">VALID 3 MONTHS</span>
-          </div>
-        </div>
-        <div class="card-price">3,000 <span>TSH</span></div>
-        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
-      </div>
-
-      <!-- YAS -->
-      <div class="card" data-network="yas">
-        <div class="popular-tag">Most Popular</div>
-        <div class="card-header">
-          <img src="images/yas.jpg" alt="YAS" class="net-logo" />
-          <h3>YAS</h3>
-        </div>
-        <div class="badge-ring">
-          <div class="badge-inner">
-            <span class="gb">23<sub>GB</sub></span>
-            <span class="validity">VALID 3 MONTHS</span>
-          </div>
-        </div>
-        <div class="card-price">3,000 <span>TSH</span></div>
-        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
-      </div>
-
-      <!-- AIRTEL -->
-      <div class="card" data-network="airtel">
-        <div class="popular-tag">Most Popular</div>
-        <div class="card-header">
-          <img src="images/airtel.jpg" alt="Airtel" class="net-logo" />
-          <h3>AIRTEL</h3>
-        </div>
-        <div class="badge-ring">
-          <div class="badge-inner">
-            <span class="gb">23<sub>GB</sub></span>
-            <span class="validity">VALID 3 MONTHS</span>
-          </div>
-        </div>
-        <div class="card-price">3,000 <span>TSH</span></div>
-        <button class="buy-btn" onclick="buy(this)">Buy Now</button>
-      </div>
-
-    </div>
   </section>
 
   <!-- ── HOW IT WORKS ──────────────────────────────── -->
@@ -117,8 +65,8 @@
       <div class="step-arrow">→</div>
       <div class="step">
         <div class="step-num">2</div>
-        <h4>Pick Bundle</h4>
-        <p>Select your network card</p>
+        <h4>Send Request</h4>
+        <p>Tap the Nunua Bundle button</p>
       </div>
       <div class="step-arrow">→</div>
       <div class="step">

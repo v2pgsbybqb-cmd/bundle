@@ -176,6 +176,26 @@ body::after {
   line-height: 1.6;
 }
 
+.input-instruction {
+  display: inline-block;
+  margin: 0 auto 16px;
+  padding: 12px 18px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #ffffff;
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.45);
+  border-radius: 14px;
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.15);
+}
+
+.input-instruction strong {
+  color: var(--accent2);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
 /* ── PHONE INPUT ──────────────────────────────────────────── */
 .phone-wrap {
   display: flex;
@@ -695,6 +715,15 @@ body::after {
     margin-bottom: 28px;
   }
 
+  .input-instruction {
+    display: block;
+    width: 100%;
+    max-width: 520px;
+    font-size: 15px;
+    padding: 11px 14px;
+    margin-bottom: 14px;
+  }
+
   .phone-field {
     max-width: 100%;
     padding: 12px 18px;
@@ -743,6 +772,12 @@ body::after {
   .hero-label {
     font-size: 11px;
     padding: 5px 12px;
+  }
+
+  .input-instruction {
+    font-size: 14px;
+    line-height: 1.4;
+    border-radius: 12px;
   }
 
   .section-title { font-size: 26px; }
