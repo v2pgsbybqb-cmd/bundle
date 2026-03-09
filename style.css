@@ -31,6 +31,12 @@ body {
   min-height: 100vh;
   position: relative;
   isolation: isolate;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+section[id] {
+  scroll-margin-top: 90px;
 }
 
 body::before {
@@ -201,6 +207,14 @@ body::after {
   display: flex;
   justify-content: center;
   margin-bottom: 24px;
+}
+
+.auto-buy {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 16px;
+  width: 100%;
+  max-width: 460px;
 }
 
 .phone-field {
@@ -508,6 +522,7 @@ body::after {
 /* Buy button */
 .buy-btn {
   width: 100%;
+  min-height: 52px;
   padding: 14px;
   border: none;
   border-radius: 50px;
@@ -518,6 +533,10 @@ body::after {
   cursor: pointer;
   transition: opacity .2s, transform .15s, box-shadow .2s;
   letter-spacing: .5px;
+}
+
+.main-buy {
+  font-size: 16px;
 }
 .buy-btn:hover {
   opacity: .9;
@@ -691,6 +710,10 @@ body::after {
 
 /* ── RESPONSIVE ───────────────────────────────────────────── */
 @media (max-width: 768px) {
+  body {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
+  }
+
   .navbar {
     padding: 14px 16px;
     gap: 10px;
@@ -704,6 +727,11 @@ body::after {
     flex-wrap: wrap;
   }
   .nav-links a { font-size: 13px; }
+
+  .nav-links a {
+    display: inline-block;
+    padding: 8px 10px;
+  }
 
   .hero {
     padding: 70px 16px 56px;
@@ -732,6 +760,26 @@ body::after {
     font-size: 17px;
   }
 
+  .auto-buy {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom));
+    max-width: none;
+    margin: 0;
+    padding: 10px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(7, 11, 20, 0.9);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 12px 30px rgba(0,0,0,.35);
+    z-index: 140;
+  }
+
+  .main-buy {
+    min-height: 54px;
+  }
+
   .cards-section {
     padding: 74px 14px;
     background-attachment: scroll;
@@ -752,10 +800,15 @@ body::after {
   .steps { gap: 10px; }
   .step { width: 140px; padding: 20px 16px; }
   .step-arrow { display: none; }
-  .live-box { width: calc(50% - 8px); min-width: 140px; }
-  .trust-card { width: calc(50% - 8px); min-width: 150px; }
+  .live-box,
+  .trust-card {
+    width: 100%;
+    max-width: 420px;
+    min-width: 0;
+  }
 
   .toast {
+    bottom: calc(86px + env(safe-area-inset-bottom));
     max-width: calc(100vw - 24px);
     white-space: normal;
     text-align: center;
@@ -813,15 +866,30 @@ body::after {
 
   .live-grid { gap: 12px; }
   .live-box {
-    width: calc(50% - 6px);
-    padding: 18px 10px;
+    width: 100%;
+    max-width: 100%;
+    padding: 18px 12px;
   }
 
   .trust-grid { gap: 12px; }
   .trust-card {
-    width: calc(50% - 6px);
-    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     padding: 22px 12px;
+  }
+}
+
+@media (hover: none) {
+  .phone-field:hover {
+    border-color: rgba(255,255,255,0.14);
+    box-shadow: 0 12px 28px rgba(0,0,0,.28);
+    transform: none;
+  }
+
+  .buy-btn:hover {
+    opacity: 1;
+    transform: none;
+    box-shadow: none;
   }
 }
 
