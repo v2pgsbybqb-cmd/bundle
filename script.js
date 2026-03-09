@@ -91,7 +91,7 @@ phoneInput.addEventListener("input", () => {
   const num = phoneInput.value.trim();
   let detected = null;
 
-  if (num.startsWith("062")) {
+  if (num.startsWith("061") || num.startsWith("062")) {
     detected = "halotel";
   } else if (num.startsWith("074") || num.startsWith("075") || num.startsWith("076")) {
     detected = "yas";
