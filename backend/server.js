@@ -79,9 +79,23 @@ function makeTxRef() {
   return `UVP${time}${random}`.slice(0,20); // ensure max length 20
 }
 
+const hasStaticToken = Boolean(process.env.CLICKPESA_TOKEN);
+const hasClientCredentials = Boolean(process.env.CLICKPESA_CLIENT_ID && process.env.CLICKPESA_API_KEY);
+
+if (!hasStaticToken && !hasClientCredentials) {
+  console.warn("Missing ClickPesa auth config. Set CLICKPESA_TOKEN or both CLICKPESA_CLIENT_ID and CLICKPESA_API_KEY.");
+}
+
 /* Create payment */
 app.post("/create-payment", paymentLimiter, async (req, res) => {
   const { phone, amount } = req.body;
+
+  if (!hasStaticToken && !hasClientCredentials) {
+    return res.status(500).json({
+      success: false,
+      error: "Server payment configuration is incomplete."
+    });
+  }
 
   if (!phone || typeof phone !== "string") {
     return res.status(400).json({ success:false, error:"Phone required" });
@@ -118,24 +132,33 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   };
 
   console.log("Sending to ClickPesa:", JSON.stringify(payload));
-  console.log("Using API key prefix:", process.env.CLICKPESA_API_KEY?.substring(0, 8));
 
   try {
+    let authToken;
 
-    // 1. Generate ClickPesa token
-    const tokenResponse = await axios.post(
-      "https://api.clickpesa.com/third-parties/generate-token",
-      {},
-      {
-        headers: {
-          "client-id": process.env.CLICKPESA_CLIENT_ID,
-          "api-key": process.env.CLICKPESA_API_KEY
+    if (process.env.CLICKPESA_TOKEN) {
+      authToken = process.env.CLICKPESA_TOKEN.startsWith("Bearer ")
+        ? process.env.CLICKPESA_TOKEN
+        : `Bearer ${process.env.CLICKPESA_TOKEN}`;
+      console.log("Using static ClickPesa token auth");
+    } else {
+      console.log("Using client-id/api-key to generate ClickPesa token");
+
+      // 1. Generate ClickPesa token
+      const tokenResponse = await axios.post(
+        "https://api.clickpesa.com/third-parties/generate-token",
+        {},
+        {
+          headers: {
+            "client-id": process.env.CLICKPESA_CLIENT_ID,
+            "api-key": process.env.CLICKPESA_API_KEY
+          }
         }
-      }
-    );
+      );
 
-    const token = tokenResponse.data.token;
-    const authToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+      const token = tokenResponse.data.token;
+      authToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+    }
 
     // 2. Initiate USSD push request
     const { data, status: httpStatus } = await axios.post(
