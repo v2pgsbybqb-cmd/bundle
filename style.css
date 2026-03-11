@@ -206,7 +206,11 @@ body::after {
 .supported-networks {
   width: 100%;
   max-width: 620px;
-  margin: 0 auto 16px;
+  margin: 0 auto 20px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 16, 30, 0.62);
 }
 
 .supported-title {
@@ -219,27 +223,30 @@ body::after {
 }
 
 .network-logos {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
 }
 
 .network-item {
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(17, 24, 39, 0.72);
+  min-height: 42px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(17, 24, 39, 0.82);
 }
 
 .network-item img {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  object-fit: cover;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: #fff;
+  padding: 2px;
 }
 
 .network-item span {
@@ -894,7 +901,8 @@ body::after {
   }
 
   .network-item {
-    padding: 7px 10px;
+    min-height: 40px;
+    padding: 7px 8px;
   }
 
   .network-item span {
@@ -996,12 +1004,13 @@ body::after {
   }
 
   .network-logos {
+    grid-template-columns: 1fr;
     gap: 8px;
   }
 
   .network-item {
     min-width: 0;
-    padding: 6px 9px;
+    padding: 6px 8px;
   }
 
   .network-item img {
