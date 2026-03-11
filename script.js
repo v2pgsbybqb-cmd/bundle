@@ -1,6 +1,7 @@
 /* ── PAYMENT ──────────────────────────────────────────────── */
 
 const BACKEND = "https://backend-ut99.onrender.com";
+const REQUEST_TIMEOUT_MS = 25000;
 
 const sendRequestBtn = document.getElementById("send-request-btn");
 
@@ -36,15 +37,25 @@ async function buy(btn) {
   document.querySelectorAll(".buy-btn").forEach(b => b.disabled = true);
 
   showStatus("loading");
+  showToast("⏳ Sending request... this can take a few seconds");
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
     const res = await fetch(`${BACKEND}/create-payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, amount: 3000 })
+      body: JSON.stringify({ phone, amount: 3000 }),
+      signal: controller.signal
     });
 
-    const data = await res.json();
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = { success: false, error: `Server error (${res.status})` };
+    }
 
     if (data.success) {
       showStatus("success");
@@ -55,8 +66,13 @@ async function buy(btn) {
     }
   } catch (err) {
     showStatus("none");
-    showToast("❌ Could not reach server. Check your connection.");
+    if (err.name === "AbortError") {
+      showToast("⏱️ Request took too long. Please try again.");
+    } else {
+      showToast("❌ Could not reach server. Check your connection.");
+    }
   } finally {
+    clearTimeout(timeoutId);
     document.querySelectorAll(".buy-btn").forEach(b => b.disabled = false);
   }
 }

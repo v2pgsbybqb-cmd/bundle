@@ -15,11 +15,14 @@ app.use(express.json({ limit: "10kb" }));
 
 /* Allowed origins */
 const allowedOrigins = [
-  process.env.ALLOWED_ORIGINS,
+  ...(process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   "https://bundle-ls5z.onrender.com",
   "http://localhost:5500",
   "http://127.0.0.1:5500"
-].filter(Boolean);
+];
 
 app.use(
   cors({
@@ -66,7 +69,7 @@ function detectChannel(phone) {
     return "TIGO-PESA";
   }
 
-  if (local.startsWith("062")) {
+  if (local.startsWith("061") || local.startsWith("062")) {
     return "HALOPESA";
   }
 
@@ -81,14 +84,69 @@ function makeTxRef() {
 
 const hasStaticToken = Boolean(process.env.CLICKPESA_TOKEN);
 const hasClientCredentials = Boolean(process.env.CLICKPESA_CLIENT_ID && process.env.CLICKPESA_API_KEY);
+const CLICKPESA_TIMEOUT_MS = Number(process.env.CLICKPESA_TIMEOUT_MS || 15000);
+
+const clickPesaApi = axios.create({ timeout: CLICKPESA_TIMEOUT_MS });
+
+let cachedBearerToken = null;
+let cachedTokenExpiryMs = 0;
 
 if (!hasStaticToken && !hasClientCredentials) {
   console.warn("Missing ClickPesa auth config. Set CLICKPESA_TOKEN or both CLICKPESA_CLIENT_ID and CLICKPESA_API_KEY.");
 }
 
+function getTokenExpiryMs(token) {
+  try {
+    const jwt = token.startsWith("Bearer ") ? token.slice(7) : token;
+    const payloadBase64 = jwt.split(".")[1];
+    if (!payloadBase64) return 0;
+
+    const payloadJson = Buffer.from(payloadBase64, "base64url").toString("utf8");
+    const payload = JSON.parse(payloadJson);
+
+    if (!payload.exp) return 0;
+    return payload.exp * 1000;
+  } catch {
+    return 0;
+  }
+}
+
+async function getClickPesaAuthToken() {
+  if (process.env.CLICKPESA_TOKEN) {
+    return process.env.CLICKPESA_TOKEN.startsWith("Bearer ")
+      ? process.env.CLICKPESA_TOKEN
+      : `Bearer ${process.env.CLICKPESA_TOKEN}`;
+  }
+
+  const now = Date.now();
+  if (cachedBearerToken && now < cachedTokenExpiryMs - 30_000) {
+    return cachedBearerToken;
+  }
+
+  const tokenResponse = await clickPesaApi.post(
+    "https://api.clickpesa.com/third-parties/generate-token",
+    {},
+    {
+      headers: {
+        "client-id": process.env.CLICKPESA_CLIENT_ID,
+        "api-key": process.env.CLICKPESA_API_KEY
+      }
+    }
+  );
+
+  const token = tokenResponse.data.token;
+  const bearerToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+
+  cachedBearerToken = bearerToken;
+  cachedTokenExpiryMs = getTokenExpiryMs(bearerToken) || now + 10 * 60 * 1000;
+
+  return cachedBearerToken;
+}
+
 /* Create payment */
 app.post("/create-payment", paymentLimiter, async (req, res) => {
   const { phone, amount } = req.body;
+  const requestStartedAt = Date.now();
 
   if (!hasStaticToken && !hasClientCredentials) {
     return res.status(500).json({
@@ -134,34 +192,10 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   console.log("Sending to ClickPesa:", JSON.stringify(payload));
 
   try {
-    let authToken;
-
-    if (process.env.CLICKPESA_TOKEN) {
-      authToken = process.env.CLICKPESA_TOKEN.startsWith("Bearer ")
-        ? process.env.CLICKPESA_TOKEN
-        : `Bearer ${process.env.CLICKPESA_TOKEN}`;
-      console.log("Using static ClickPesa token auth");
-    } else {
-      console.log("Using client-id/api-key to generate ClickPesa token");
-
-      // 1. Generate ClickPesa token
-      const tokenResponse = await axios.post(
-        "https://api.clickpesa.com/third-parties/generate-token",
-        {},
-        {
-          headers: {
-            "client-id": process.env.CLICKPESA_CLIENT_ID,
-            "api-key": process.env.CLICKPESA_API_KEY
-          }
-        }
-      );
-
-      const token = tokenResponse.data.token;
-      authToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-    }
+    const authToken = await getClickPesaAuthToken();
 
     // 2. Initiate USSD push request
-    const { data, status: httpStatus } = await axios.post(
+    const { data, status: httpStatus } = await clickPesaApi.post(
       "https://api.clickpesa.com/third-parties/payments/initiate-ussd-push-request",
       payload,
       {
@@ -174,6 +208,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
     console.log("ClickPesa HTTP status:", httpStatus);
     console.log("ClickPesa response payload:", JSON.stringify(data));
+    console.log("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
     // Health-check response means ClickPesa rejected the request (wrong endpoint or bad payload)
     const isHealthCheck = data.version && data.status === "up";
@@ -214,6 +249,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     console.error("ClickPesa HTTP error status:", err.response?.status);
     console.error("ClickPesa error body:", JSON.stringify(errBody));
     console.error("ClickPesa error message:", err.message);
+    console.error("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
     return res.status(500).json({
       success: false,
