@@ -169,8 +169,7 @@ function updateBuyState() {
     return;
   }
 
-  const phone = getCurrentPhone();
-  sendRequestBtn.disabled = !isValidPhone(phone);
+  sendRequestBtn.disabled = false;
 }
 
 function openCodeModal(prefill = "") {
