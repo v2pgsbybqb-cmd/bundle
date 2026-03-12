@@ -104,8 +104,13 @@ function makeTxRef() {
 
 async function ensureSubmissionsFile() {
   try {
+    // Ensure data directory exists
+    await fs.mkdir(path.dirname(submissionsFile), { recursive: true });
+    // Check if file exists
     await fs.access(submissionsFile);
   } catch {
+    // Create file if it doesn't exist
+    await fs.mkdir(path.dirname(submissionsFile), { recursive: true });
     await fs.writeFile(submissionsFile, "[]\n", "utf8");
   }
 }
