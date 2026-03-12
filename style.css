@@ -280,7 +280,7 @@ body::after {
 .phone-wrap {
   display: flex;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .auto-buy {
@@ -345,6 +345,129 @@ body::after {
   display: none;
 }
 .network-badge.show { display: inline-block; }
+
+.ghost-btn {
+  min-height: 44px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .2s, border-color .2s, background .2s;
+}
+
+.ghost-btn:hover {
+  transform: translateY(-1px);
+  border-color: rgba(0, 212, 255, 0.36);
+  background: rgba(0, 212, 255, 0.1);
+}
+
+.ghost-btn:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.code-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 9999;
+}
+
+.code-modal.show {
+  display: flex;
+}
+
+.code-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(3, 6, 12, 0.78);
+  backdrop-filter: blur(8px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.code-modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(400px, 100%);
+  padding: 32px 28px;
+  border-radius: 20px;
+  border: 1px solid rgba(108, 99, 255, 0.35);
+  background: linear-gradient(180deg, rgba(18, 24, 42, 0.99), rgba(10, 14, 26, 0.99));
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+
+.code-modal-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 12px;
+}
+
+.code-modal-dialog h3 {
+  font-size: 28px;
+  line-height: 1.15;
+  margin-bottom: 12px;
+}
+
+.code-modal-text {
+  color: #b4bed4;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+
+.code-modal-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #d8deed;
+}
+
+.code-modal-input {
+  width: 100%;
+  min-height: 52px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 8px;
+  outline: none;
+}
+
+.code-modal-input:focus {
+  border-color: rgba(0, 212, 255, 0.42);
+  box-shadow: 0 0 0 4px rgba(0, 212, 255, 0.12);
+}
+
+.code-modal-error {
+  min-height: 20px;
+  margin-top: 10px;
+  color: #ff8f8f;
+  font-size: 13px;
+}
+
+.code-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 12px;
+}
 
 /* ── STATUS MESSAGES ──────────────────────────────────────── */
 .status-loading,
@@ -1033,6 +1156,24 @@ body::after {
     padding: 11px 14px;
   }
   .phone-field input { font-size: 16px; }
+
+  .code-modal-dialog {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+
+  .code-modal-dialog h3 {
+    font-size: 24px;
+  }
+
+  .code-modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .code-modal-actions .buy-btn,
+  .code-modal-actions .ghost-btn {
+    width: 100%;
+  }
 
   .status-loading,
   .status-success,
