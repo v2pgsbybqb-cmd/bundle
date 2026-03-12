@@ -23,6 +23,14 @@ app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
 
 /* Serve admin panel (static files, not affected by CORS) */
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(adminStaticDir, "admin.html"));
+});
+
+app.get("/admin/", (req, res) => {
+  res.sendFile(path.join(adminStaticDir, "admin.html"));
+});
+
 app.use("/admin", express.static(adminStaticDir, { index: "admin.html" }));
 
 /* Allowed origins */
