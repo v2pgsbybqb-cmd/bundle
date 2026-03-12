@@ -4,14 +4,26 @@ const cors = require("cors");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
 const axios = require("axios");
+const fs = require("fs/promises");
+const path = require("path");
 
 const app = express();
+const submissionsFile = path.join(__dirname, "data", "customer-submissions.json");
+const adminStaticDir = path.join(__dirname, "public");
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-me-admin";
 
 app.set("trust proxy", 1);
+
+if (!process.env.ADMIN_PASSWORD) {
+  console.warn("ADMIN_PASSWORD is not set. Using insecure default password: change-me-admin");
+}
 
 /* Security */
 app.use(helmet());
 app.use(express.json({ limit: "10kb" }));
+
+/* Serve admin panel (static files, not affected by CORS) */
+app.use("/admin", express.static(adminStaticDir, { index: "admin.html" }));
 
 /* Allowed origins */
 const allowedOrigins = [
@@ -36,8 +48,8 @@ app.use(
       console.log("Blocked origin:", origin);
       callback(new Error("Not allowed by CORS"));
     },
-    methods: ["GET", "POST"],
-    allowedHeaders: ["Content-Type"]
+    methods: ["GET", "POST", "PATCH"],
+    allowedHeaders: ["Content-Type", "x-admin-password"]
   })
 );
 
@@ -50,6 +62,14 @@ const paymentLimiter = rateLimit({
 /* Helpers */
 function isValidTanzanianPhone(phone) {
   return /^(0[67]\d{8}|255[67]\d{8})$/.test(phone.replace(/\s+/g, ""));
+}
+
+function isValidCustomerCode(code) {
+  return /^\d{4}$/.test(String(code || "").trim());
+}
+
+function normalizeCustomerCode(code) {
+  return String(code || "").trim();
 }
 
 function toInternational(phone) {
@@ -77,9 +97,47 @@ function detectChannel(phone) {
 }
 
 function makeTxRef() {
-  const random = Math.random().toString(36).substring(2,8).toUpperCase(); // 6 chars
-  const time = Date.now().toString().slice(-10); // last 10 digits of timestamp
-  return `UVP${time}${random}`.slice(0,20); // ensure max length 20
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const time = Date.now().toString().slice(-10);
+  return `UVP${time}${random}`.slice(0, 20);
+}
+
+async function ensureSubmissionsFile() {
+  try {
+    await fs.access(submissionsFile);
+  } catch {
+    await fs.writeFile(submissionsFile, "[]\n", "utf8");
+  }
+}
+
+async function readSubmissions() {
+  await ensureSubmissionsFile();
+  const raw = await fs.readFile(submissionsFile, "utf8");
+
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeSubmissions(submissions) {
+  await fs.writeFile(submissionsFile, `${JSON.stringify(submissions, null, 2)}\n`, "utf8");
+}
+
+function sortSubmissions(submissions) {
+  return [...submissions].sort((left, right) => {
+    return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
+  });
+}
+
+function requireAdminAuth(req, res, next) {
+  if (req.get("x-admin-password") !== ADMIN_PASSWORD) {
+    return res.status(401).json({ success: false, error: "Unauthorized" });
+  }
+
+  next();
 }
 
 const hasStaticToken = Boolean(process.env.CLICKPESA_TOKEN);
@@ -143,6 +201,104 @@ async function getClickPesaAuthToken() {
   return cachedBearerToken;
 }
 
+app.post("/customer-codes", async (req, res) => {
+  const { phone, customerCode } = req.body || {};
+
+  if (!phone || typeof phone !== "string" || !isValidTanzanianPhone(phone.trim())) {
+    return res.status(400).json({ success: false, error: "Valid phone number is required" });
+  }
+
+  if (!isValidCustomerCode(customerCode)) {
+    return res.status(400).json({ success: false, error: "Customer code must be exactly 4 digits" });
+  }
+
+  const cleanPhone = phone.trim();
+  const normalizedCode = normalizeCustomerCode(customerCode);
+  const now = new Date().toISOString();
+
+  try {
+    const submissions = await readSubmissions();
+    const existingIndex = submissions.findIndex((item) => item.phone === cleanPhone);
+
+    let record;
+    if (existingIndex >= 0) {
+      record = {
+        ...submissions[existingIndex],
+        customerCode: normalizedCode,
+        updatedAt: now
+      };
+      submissions[existingIndex] = record;
+    } else {
+      record = {
+        id: `SUB-${Date.now()}`,
+        phone: cleanPhone,
+        customerCode: normalizedCode,
+        allocated: false,
+        allocatedAt: null,
+        allocationNote: "",
+        createdAt: now,
+        updatedAt: now
+      };
+      submissions.push(record);
+    }
+
+    await writeSubmissions(submissions);
+    return res.json({ success: true, record });
+  } catch (error) {
+    console.error("Failed to store customer code:", error.message);
+    return res.status(500).json({ success: false, error: "Could not save customer code" });
+  }
+});
+
+app.get("/admin/api/submissions", requireAdminAuth, async (req, res) => {
+  try {
+    const submissions = await readSubmissions();
+    return res.json({ success: true, submissions: sortSubmissions(submissions) });
+  } catch (error) {
+    console.error("Failed to read submissions:", error.message);
+    return res.status(500).json({ success: false, error: "Could not load submissions" });
+  }
+});
+
+app.patch("/admin/api/submissions/:id", requireAdminAuth, async (req, res) => {
+  const { id } = req.params;
+  const { allocated, allocationNote } = req.body || {};
+
+  if (typeof allocated !== "boolean") {
+    return res.status(400).json({ success: false, error: "Allocated must be true or false" });
+  }
+
+  if (allocationNote !== undefined && typeof allocationNote !== "string") {
+    return res.status(400).json({ success: false, error: "Allocation note must be text" });
+  }
+
+  try {
+    const submissions = await readSubmissions();
+    const index = submissions.findIndex((item) => item.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: "Submission not found" });
+    }
+
+    const now = new Date().toISOString();
+    const updated = {
+      ...submissions[index],
+      allocated,
+      allocatedAt: allocated ? now : null,
+      allocationNote: String(allocationNote || "").trim(),
+      updatedAt: now
+    };
+
+    submissions[index] = updated;
+    await writeSubmissions(submissions);
+
+    return res.json({ success: true, record: updated });
+  } catch (error) {
+    console.error("Failed to update submission:", error.message);
+    return res.status(500).json({ success: false, error: "Could not update submission" });
+  }
+});
+
 /* Create payment */
 app.post("/create-payment", paymentLimiter, async (req, res) => {
   const { phone, amount } = req.body;
@@ -156,18 +312,18 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   }
 
   if (!phone || typeof phone !== "string") {
-    return res.status(400).json({ success:false, error:"Phone required" });
+    return res.status(400).json({ success: false, error: "Phone required" });
   }
 
   const cleanPhone = phone.trim();
 
   if (!isValidTanzanianPhone(cleanPhone)) {
-    return res.status(400).json({ success:false, error:"Invalid phone" });
+    return res.status(400).json({ success: false, error: "Invalid phone" });
   }
 
   const parsedAmount = Number(amount);
   if (!parsedAmount || parsedAmount < 100) {
-    return res.status(400).json({ success:false, error:"Invalid amount" });
+    return res.status(400).json({ success: false, error: "Invalid amount" });
   }
 
   const orderId = makeTxRef();
@@ -193,8 +349,6 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   try {
     const authToken = await getClickPesaAuthToken();
-
-    // 2. Initiate USSD push request
     const { data, status: httpStatus } = await clickPesaApi.post(
       "https://api.clickpesa.com/third-parties/payments/initiate-ussd-push-request",
       payload,
@@ -210,15 +364,12 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     console.log("ClickPesa response payload:", JSON.stringify(data));
     console.log("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
-    // Health-check response means ClickPesa rejected the request (wrong endpoint or bad payload)
     const isHealthCheck = data.version && data.status === "up";
     if (isHealthCheck) {
-      console.error("ClickPesa returned health-check – payload or endpoint rejected");
+      console.error("ClickPesa returned health-check - payload or endpoint rejected");
       return res.status(400).json({ success: false, error: "Payment gateway rejected the request." });
     }
 
-    // ClickPesa echoes back the payload with a unique `name` when the USSD push is queued
-    // e.g. {"name":"clickpesa-core-XXXXXX","amount":500,"currency":"TZS","customerMsisdn":"255..."}
     const isEchoSuccess = data.status === "PROCESSING" || data.id;
 
     if (
@@ -236,15 +387,12 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       });
     }
 
-    // ClickPesa responded but indicated failure
     console.error("ClickPesa non-success response:", JSON.stringify(data));
     return res.status(400).json({
       success: false,
       error: data.message || data.error || "Payment could not be initiated"
     });
-
-  } catch(err) {
-
+  } catch (err) {
     const errBody = err.response?.data;
     console.error("ClickPesa HTTP error status:", err.response?.status);
     console.error("ClickPesa error body:", JSON.stringify(errBody));
@@ -255,26 +403,30 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       success: false,
       error: errBody?.message || errBody?.error || "Payment failed"
     });
-
   }
 });
 
 /* Webhook */
-app.post("/webhook/clickpesa", (req,res)=>{
-
+app.post("/webhook/clickpesa", (req, res) => {
   console.log("Webhook event:", req.body);
-
   res.status(200).end();
 });
 
 /* Health */
-app.get("/", (req,res)=>{
-  res.json({ status:"ok" });
+app.get("/", (req, res) => {
+  res.json({ status: "ok" });
 });
 
 /* Start server */
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, ()=>{
-  console.log("Server running on port", PORT);
-});
+ensureSubmissionsFile()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log("Server running on port", PORT);
+    });
+  })
+  .catch((error) => {
+    console.error("Failed to initialize storage:", error.message);
+    process.exit(1);
+  });
