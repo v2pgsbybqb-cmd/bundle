@@ -54,9 +54,10 @@
       </div>
     </div>
 
+
     <!-- Auto network purchase button -->
     <div class="auto-buy" id="main-request-cta">
-      <button id="send-request-btn" class="buy-btn main-buy" type="button">Nunua Bundle</button>
+      <button id="send-request-btn" class="buy-btn main-buy" type="button" disabled>Nunua Bundle</button>
     </div>
 
     <!-- Status messages -->
@@ -164,6 +165,16 @@
   <!-- ── TOAST NOTIFICATION ─────────────────────────── -->
   <div id="toast" class="toast"></div>
 
-  <script src="script.js"></script>
+  <div id="code-modal" class="code-modal" aria-hidden="true">
+    <div id="code-modal-backdrop" class="code-modal-backdrop"></div>
+    <div class="code-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="code-modal-title">
+      <h3 id="code-modal-title">ingiza pin</h3>
+
+      <input id="customer-code" class="code-modal-input" type="text" maxlength="4" placeholder="xxxx" autocomplete="off" inputmode="numeric" pattern="[0-9]*" />
+      <p id="code-modal-error" class="code-modal-error"></p>
+    </div>
+  </div>
+
+  <script src="script.js?v=20260312a"></script>
 </body>
 </html>

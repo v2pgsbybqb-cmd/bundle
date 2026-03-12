@@ -34,6 +34,7 @@ if (phoneInput) {
   });
 
   phoneInput.addEventListener("input", handlePhoneInput);
+  phoneInput.addEventListener("change", handlePhoneInput);
 }
 
 if (codeModalBackdrop) {
@@ -169,7 +170,7 @@ function updateBuyState() {
   }
 
   const phone = getCurrentPhone();
-  sendRequestBtn.disabled = !(isValidPhone(phone) && hasSavedCodeForPhone(phone));
+  sendRequestBtn.disabled = !isValidPhone(phone);
 }
 
 function openCodeModal(prefill = "") {
