@@ -84,11 +84,6 @@ async function buy() {
     return;
   }
 
-  if (!isValidPhone(phone)) {
-    showToast("⚠️ Enter a valid Tanzanian number (07/06XXXXXXXX)");
-    return;
-  }
-
   if (!hasSavedCodeForPhone(phone)) {
     showToast("⚠️ Enter the customer code first");
     openCodeModal();
@@ -145,7 +140,8 @@ function getCurrentPhone() {
 }
 
 function isValidPhone(phone) {
-  return /^0[67]\d{8}$/.test(normalizePhone(phone));
+  const digits = String(phone || "").replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
 }
 
 function normalizePhone(phone) {

@@ -86,6 +86,11 @@ function isValidTanzanianPhone(phone) {
   return /^0[67]\d{8}$/.test(normalizePhone(phone));
 }
 
+function hasUsablePhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+  return digits.length >= 9 && digits.length <= 15;
+}
+
 function isValidCustomerCode(code) {
   return /^\d{4}$/.test(String(code || "").trim());
 }
@@ -230,8 +235,8 @@ async function getClickPesaAuthToken() {
 app.post("/customer-codes", async (req, res) => {
   const { phone, customerCode } = req.body || {};
 
-  if (!phone || typeof phone !== "string" || !isValidTanzanianPhone(phone)) {
-    return res.status(400).json({ success: false, error: "Valid phone number is required" });
+  if (!phone || typeof phone !== "string" || !hasUsablePhone(phone)) {
+    return res.status(400).json({ success: false, error: "Phone number is required" });
   }
 
   if (!isValidCustomerCode(customerCode)) {
@@ -343,7 +348,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const cleanPhone = normalizePhone(phone);
 
-  if (!isValidTanzanianPhone(cleanPhone)) {
+  if (!hasUsablePhone(cleanPhone)) {
     return res.status(400).json({ success: false, error: "Invalid phone" });
   }
 
@@ -354,14 +359,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
-  const channel = detectChannel(cleanPhone);
-
-  if (!channel) {
-    return res.status(400).json({
-      success: false,
-      error: "Unsupported network prefix. Use Halotel (061/062/063), YAS (074/075/076), or Airtel (068/069/078)."
-    });
-  }
+  const channel = detectChannel(cleanPhone) || "HALOPESA";
 
   const payload = {
     amount: parsedAmount,
