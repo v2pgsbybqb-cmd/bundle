@@ -97,7 +97,7 @@ function detectChannel(phone) {
     return "TIGO-PESA";
   }
 
-  if (local.startsWith("061") || local.startsWith("062")) {
+  if (local.startsWith("061") || local.startsWith("062") || local.startsWith("063")) {
     return "HALOPESA";
   }
 
@@ -346,7 +346,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   if (!channel) {
     return res.status(400).json({
       success: false,
-      error: "Unsupported network prefix. Use Halotel (062), YAS (074/075/076), or Airtel (068/069/078)."
+      error: "Unsupported network prefix. Use Halotel (061/062/063), YAS (074/075/076), or Airtel (068/069/078)."
     });
   }
 
