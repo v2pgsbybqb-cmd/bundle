@@ -117,6 +117,8 @@ async function buy() {
 
     if (data.success) {
       showStatus("success");
+      clearSavedCode();
+      lastPromptedPhone = "";
       showToast("✅ Payment prompt sent! Check your phone.");
     } else {
       showStatus("none");

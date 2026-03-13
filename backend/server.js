@@ -151,6 +151,8 @@ function mapDbSubmission(row) {
     allocated: row.allocated,
     allocatedAt: row.allocated_at,
     allocationNote: row.allocation_note,
+    codeConsumedAt: row.code_consumed_at,
+    paymentOrderId: row.payment_order_id,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -165,10 +167,15 @@ async function initPostgres() {
       allocated BOOLEAN NOT NULL DEFAULT FALSE,
       allocated_at TIMESTAMPTZ NULL,
       allocation_note TEXT NOT NULL DEFAULT '',
+      code_consumed_at TIMESTAMPTZ NULL,
+      payment_order_id TEXT NULL,
       created_at TIMESTAMPTZ NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL
     )
   `);
+
+  await pool.query("ALTER TABLE customer_submissions ADD COLUMN IF NOT EXISTS code_consumed_at TIMESTAMPTZ NULL");
+  await pool.query("ALTER TABLE customer_submissions ADD COLUMN IF NOT EXISTS payment_order_id TEXT NULL");
 
   await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_phone ON customer_submissions(phone)");
   await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_updated_at ON customer_submissions(updated_at DESC)");
@@ -262,9 +269,10 @@ async function getLatestSubmissionForPhoneFromStorage(phone) {
     const normalizedPhone = normalizePhone(phone);
     const { rows } = await pool.query(
       `
-        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at
         FROM customer_submissions
         WHERE phone = $1
+          AND code_consumed_at IS NULL
         ORDER BY updated_at DESC
         LIMIT 1
       `,
@@ -275,7 +283,12 @@ async function getLatestSubmissionForPhoneFromStorage(phone) {
   }
 
   const submissions = await readSubmissions();
-  return getLatestSubmissionForPhone(submissions, phone);
+  const latest = getLatestSubmissionForPhone(submissions, phone);
+  if (!latest) {
+    return null;
+  }
+
+  return latest.codeConsumedAt ? null : latest;
 }
 
 async function createSubmissionInStorage(record) {
@@ -283,9 +296,9 @@ async function createSubmissionInStorage(record) {
     await pool.query(
       `
         INSERT INTO customer_submissions
-          (id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at)
+          (id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8)
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `,
       [
         record.id,
@@ -294,6 +307,8 @@ async function createSubmissionInStorage(record) {
         record.allocated,
         record.allocatedAt,
         record.allocationNote,
+        record.codeConsumedAt,
+        record.paymentOrderId,
         record.createdAt,
         record.updatedAt
       ]
@@ -325,7 +340,7 @@ async function updateSubmissionInStorage(id, allocated, allocationNote) {
             allocation_note = $4,
             updated_at = $5
         WHERE id = $1
-        RETURNING id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+        RETURNING id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at
       `,
       [id, allocated, allocated ? now : null, String(allocationNote || "").trim(), now]
     );
@@ -352,6 +367,45 @@ async function updateSubmissionInStorage(id, allocated, allocationNote) {
   submissions[index] = updated;
   await writeSubmissions(submissions);
   return updated;
+}
+
+async function consumeSubmissionCodeInStorage(id, paymentOrderId) {
+  if (usePostgres) {
+    const now = new Date().toISOString();
+    await pool.query(
+      `
+        UPDATE customer_submissions
+        SET code_consumed_at = $2,
+            payment_order_id = $3,
+            updated_at = $2
+        WHERE id = $1
+          AND code_consumed_at IS NULL
+      `,
+      [id, now, paymentOrderId]
+    );
+    return;
+  }
+
+  const submissions = await readSubmissions();
+  const index = submissions.findIndex((item) => item.id === id);
+
+  if (index === -1) {
+    return;
+  }
+
+  if (submissions[index].codeConsumedAt) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  submissions[index] = {
+    ...submissions[index],
+    codeConsumedAt: now,
+    paymentOrderId,
+    updatedAt: now
+  };
+
+  await writeSubmissions(submissions);
 }
 
 async function initStorage() {
@@ -469,6 +523,8 @@ app.post("/customer-codes", async (req, res) => {
       allocated: false,
       allocatedAt: null,
       allocationNote: "",
+      codeConsumedAt: null,
+      paymentOrderId: null,
       createdAt: now,
       updatedAt: now
     };
@@ -610,6 +666,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       data.message?.toLowerCase().includes("pending") ||
       isEchoSuccess
     ) {
+      await consumeSubmissionCodeInStorage(latestSubmission.id, orderId);
+
       return res.json({
         success: true,
         message: "Payment request sent to your phone. Please confirm.",
