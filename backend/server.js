@@ -12,6 +12,7 @@ const submissionsFile = path.join(__dirname, "data", "customer-submissions.json"
 const adminStaticDir = path.join(__dirname, "public");
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-me-admin";
 const MAX_SUBMISSIONS_LOGS = Number(process.env.MAX_SUBMISSIONS_LOGS || 50000);
+const CUSTOMER_CODE_VALIDITY_MINUTES = Number(process.env.CUSTOMER_CODE_VALIDITY_MINUTES || 30);
 
 app.set("trust proxy", 1);
 
@@ -162,6 +163,33 @@ function sortSubmissions(submissions) {
   return [...submissions].sort((left, right) => {
     return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
   });
+}
+
+function getLatestSubmissionForPhone(submissions, phone) {
+  const normalizedPhone = normalizePhone(phone);
+  const byPhone = submissions.filter((item) => normalizePhone(item.phone) === normalizedPhone);
+
+  if (!byPhone.length) {
+    return null;
+  }
+
+  return byPhone.sort((left, right) => {
+    return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
+  })[0];
+}
+
+function isSubmissionFresh(submission) {
+  if (!submission) {
+    return false;
+  }
+
+  const submittedAt = new Date(submission.updatedAt || submission.createdAt).getTime();
+  if (!Number.isFinite(submittedAt)) {
+    return false;
+  }
+
+  const maxAgeMs = CUSTOMER_CODE_VALIDITY_MINUTES * 60 * 1000;
+  return Date.now() - submittedAt <= maxAgeMs;
 }
 
 function requireAdminAuth(req, res, next) {
@@ -349,6 +377,26 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   const parsedAmount = Number(amount);
   if (!parsedAmount || parsedAmount < 100) {
     return res.status(400).json({ success: false, error: "Invalid amount" });
+  }
+
+  let latestSubmission;
+  try {
+    const submissions = await readSubmissions();
+    latestSubmission = getLatestSubmissionForPhone(submissions, cleanPhone);
+  } catch (error) {
+    console.error("Failed to read submissions before payment:", error.message);
+    return res.status(500).json({ success: false, error: "Could not validate customer code" });
+  }
+
+  if (!latestSubmission || !isValidCustomerCode(latestSubmission.customerCode)) {
+    return res.status(400).json({ success: false, error: "Enter customer code first" });
+  }
+
+  if (!isSubmissionFresh(latestSubmission)) {
+    return res.status(400).json({
+      success: false,
+      error: `Customer code expired. Enter a new 4-digit code (valid for ${CUSTOMER_CODE_VALIDITY_MINUTES} minutes).`
+    });
   }
 
   const orderId = makeTxRef();
