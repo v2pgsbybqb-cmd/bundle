@@ -87,8 +87,8 @@ function isValidTanzanianPhone(phone) {
 }
 
 function hasUsablePhone(phone) {
-  const digits = String(phone || "").replace(/\D/g, "");
-  return digits.length >= 9 && digits.length <= 15;
+  const local = normalizePhone(phone);
+  return /^0\d{9}$/.test(local);
 }
 
 function isValidCustomerCode(code) {
