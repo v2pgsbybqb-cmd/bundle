@@ -359,7 +359,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
-  const channel = detectChannel(cleanPhone) || "HALOPESA";
+  const channel = "MOBILE-MONEY";
 
   const payload = {
     amount: parsedAmount,
