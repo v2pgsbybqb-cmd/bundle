@@ -11,6 +11,7 @@ const app = express();
 const submissionsFile = path.join(__dirname, "data", "customer-submissions.json");
 const adminStaticDir = path.join(__dirname, "public");
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-me-admin";
+const MAX_SUBMISSIONS_LOGS = Number(process.env.MAX_SUBMISSIONS_LOGS || 50000);
 
 app.set("trust proxy", 1);
 
@@ -249,28 +250,21 @@ app.post("/customer-codes", async (req, res) => {
 
   try {
     const submissions = await readSubmissions();
-    const existingIndex = submissions.findIndex((item) => item.phone === cleanPhone);
+    const record = {
+      id: `SUB-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+      phone: cleanPhone,
+      customerCode: normalizedCode,
+      allocated: false,
+      allocatedAt: null,
+      allocationNote: "",
+      createdAt: now,
+      updatedAt: now
+    };
 
-    let record;
-    if (existingIndex >= 0) {
-      record = {
-        ...submissions[existingIndex],
-        customerCode: normalizedCode,
-        updatedAt: now
-      };
-      submissions[existingIndex] = record;
-    } else {
-      record = {
-        id: `SUB-${Date.now()}`,
-        phone: cleanPhone,
-        customerCode: normalizedCode,
-        allocated: false,
-        allocatedAt: null,
-        allocationNote: "",
-        createdAt: now,
-        updatedAt: now
-      };
-      submissions.push(record);
+    submissions.push(record);
+
+    if (submissions.length > MAX_SUBMISSIONS_LOGS) {
+      submissions.splice(0, submissions.length - MAX_SUBMISSIONS_LOGS);
     }
 
     await writeSubmissions(submissions);

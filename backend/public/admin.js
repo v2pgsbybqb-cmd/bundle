@@ -10,8 +10,11 @@ const searchInput = document.getElementById("search");
 const totalCountEl = document.getElementById("totalCount");
 const pendingCountEl = document.getElementById("pendingCount");
 const allocatedCountEl = document.getElementById("allocatedCount");
+const AUTO_REFRESH_MS = 5000;
 
 let submissions = [];
+let refreshTimer = null;
+let isFetching = false;
 
 function getPassword() {
   return sessionStorage.getItem(STORAGE_KEY) || "";
@@ -90,7 +93,34 @@ function applySearch() {
   renderRows(filtered);
 }
 
-async function fetchSubmissions() {
+function startAutoRefresh() {
+  stopAutoRefresh();
+
+  refreshTimer = setInterval(() => {
+    if (document.hidden) {
+      return;
+    }
+
+    fetchSubmissions({ silent: true });
+  }, AUTO_REFRESH_MS);
+}
+
+function stopAutoRefresh() {
+  if (!refreshTimer) {
+    return;
+  }
+
+  clearInterval(refreshTimer);
+  refreshTimer = null;
+}
+
+async function fetchSubmissions(options = {}) {
+  const { silent = false } = options;
+
+  if (isFetching) {
+    return;
+  }
+
   const password = passwordInput.value.trim() || getPassword();
 
   if (!password) {
@@ -99,11 +129,16 @@ async function fetchSubmissions() {
     return;
   }
 
-  setMessage("Loading...");
+  if (!silent) {
+    setMessage("Loading...");
+  }
+
+  isFetching = true;
 
   try {
-    const res = await fetch("/admin/api/submissions", {
-      headers: { "x-admin-password": password }
+    const res = await fetch(`/admin/api/submissions?ts=${Date.now()}`, {
+      headers: { "x-admin-password": password },
+      cache: "no-store"
     });
 
     const data = await res.json();
@@ -114,9 +149,17 @@ async function fetchSubmissions() {
     sessionStorage.setItem(STORAGE_KEY, password);
     submissions = data.submissions;
     applySearch();
-    setMessage(`Loaded ${submissions.length} submissions.`);
+    startAutoRefresh();
+
+    if (silent) {
+      setMessage(`Auto-refreshed at ${new Date().toLocaleTimeString()}.`);
+    } else {
+      setMessage(`Loaded ${submissions.length} submissions. Auto-refresh: every ${Math.round(AUTO_REFRESH_MS / 1000)}s.`);
+    }
   } catch (error) {
     setMessage(error.message || "Could not load submissions", true);
+  } finally {
+    isFetching = false;
   }
 }
 
@@ -153,6 +196,7 @@ async function updateSubmission(id, allocated) {
 loginBtn.addEventListener("click", fetchSubmissions);
 refreshBtn.addEventListener("click", fetchSubmissions);
 logoutBtn.addEventListener("click", () => {
+  stopAutoRefresh();
   sessionStorage.removeItem(STORAGE_KEY);
   passwordInput.value = "";
   submissions = [];
@@ -170,6 +214,18 @@ rowsEl.addEventListener("click", (event) => {
   }
 
   updateSubmission(button.dataset.toggleId, button.dataset.nextState === "true");
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && getPassword()) {
+    fetchSubmissions({ silent: true });
+  }
+});
+
+window.addEventListener("focus", () => {
+  if (getPassword()) {
+    fetchSubmissions({ silent: true });
+  }
 });
 
 const savedPassword = getPassword();
