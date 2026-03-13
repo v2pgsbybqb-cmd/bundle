@@ -6,6 +6,7 @@ const rateLimit = require("express-rate-limit");
 const axios = require("axios");
 const fs = require("fs/promises");
 const path = require("path");
+const { Pool } = require("pg");
 
 const app = express();
 const submissionsFile = path.join(__dirname, "data", "customer-submissions.json");
@@ -13,6 +14,14 @@ const adminStaticDir = path.join(__dirname, "public");
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-me-admin";
 const MAX_SUBMISSIONS_LOGS = Number(process.env.MAX_SUBMISSIONS_LOGS || 50000);
 const CUSTOMER_CODE_VALIDITY_MINUTES = Number(process.env.CUSTOMER_CODE_VALIDITY_MINUTES || 30);
+const usePostgres = Boolean(process.env.DATABASE_URL);
+
+const pool = usePostgres
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false
+    })
+  : null;
 
 app.set("trust proxy", 1);
 
@@ -130,6 +139,60 @@ function makeTxRef() {
   return `UVP${time}${random}`.slice(0, 20);
 }
 
+function mapDbSubmission(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    phone: row.phone,
+    customerCode: row.customer_code,
+    allocated: row.allocated,
+    allocatedAt: row.allocated_at,
+    allocationNote: row.allocation_note,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+async function initPostgres() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS customer_submissions (
+      id TEXT PRIMARY KEY,
+      phone TEXT NOT NULL,
+      customer_code TEXT NOT NULL,
+      allocated BOOLEAN NOT NULL DEFAULT FALSE,
+      allocated_at TIMESTAMPTZ NULL,
+      allocation_note TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL
+    )
+  `);
+
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_phone ON customer_submissions(phone)");
+  await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_updated_at ON customer_submissions(updated_at DESC)");
+}
+
+async function prunePostgresSubmissions() {
+  if (!MAX_SUBMISSIONS_LOGS || MAX_SUBMISSIONS_LOGS < 1) {
+    return;
+  }
+
+  await pool.query(
+    `
+      DELETE FROM customer_submissions
+      WHERE id IN (
+        SELECT id
+        FROM customer_submissions
+        ORDER BY updated_at DESC
+        OFFSET $1
+      )
+    `,
+    [MAX_SUBMISSIONS_LOGS]
+  );
+}
+
 async function ensureSubmissionsFile() {
   try {
     // Ensure data directory exists
@@ -144,6 +207,18 @@ async function ensureSubmissionsFile() {
 }
 
 async function readSubmissions() {
+  if (usePostgres) {
+    const { rows } = await pool.query(
+      `
+        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+        FROM customer_submissions
+        ORDER BY updated_at DESC
+      `
+    );
+
+    return rows.map(mapDbSubmission);
+  }
+
   await ensureSubmissionsFile();
   const raw = await fs.readFile(submissionsFile, "utf8");
 
@@ -156,6 +231,10 @@ async function readSubmissions() {
 }
 
 async function writeSubmissions(submissions) {
+  if (usePostgres) {
+    throw new Error("writeSubmissions is not used with PostgreSQL storage");
+  }
+
   await fs.writeFile(submissionsFile, `${JSON.stringify(submissions, null, 2)}\n`, "utf8");
 }
 
@@ -176,6 +255,112 @@ function getLatestSubmissionForPhone(submissions, phone) {
   return byPhone.sort((left, right) => {
     return new Date(right.updatedAt || right.createdAt).getTime() - new Date(left.updatedAt || left.createdAt).getTime();
   })[0];
+}
+
+async function getLatestSubmissionForPhoneFromStorage(phone) {
+  if (usePostgres) {
+    const normalizedPhone = normalizePhone(phone);
+    const { rows } = await pool.query(
+      `
+        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+        FROM customer_submissions
+        WHERE phone = $1
+        ORDER BY updated_at DESC
+        LIMIT 1
+      `,
+      [normalizedPhone]
+    );
+
+    return mapDbSubmission(rows[0]);
+  }
+
+  const submissions = await readSubmissions();
+  return getLatestSubmissionForPhone(submissions, phone);
+}
+
+async function createSubmissionInStorage(record) {
+  if (usePostgres) {
+    await pool.query(
+      `
+        INSERT INTO customer_submissions
+          (id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at)
+        VALUES
+          ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [
+        record.id,
+        record.phone,
+        record.customerCode,
+        record.allocated,
+        record.allocatedAt,
+        record.allocationNote,
+        record.createdAt,
+        record.updatedAt
+      ]
+    );
+
+    await prunePostgresSubmissions();
+    return record;
+  }
+
+  const submissions = await readSubmissions();
+  submissions.push(record);
+
+  if (submissions.length > MAX_SUBMISSIONS_LOGS) {
+    submissions.splice(0, submissions.length - MAX_SUBMISSIONS_LOGS);
+  }
+
+  await writeSubmissions(submissions);
+  return record;
+}
+
+async function updateSubmissionInStorage(id, allocated, allocationNote) {
+  if (usePostgres) {
+    const now = new Date().toISOString();
+    const { rows } = await pool.query(
+      `
+        UPDATE customer_submissions
+        SET allocated = $2,
+            allocated_at = $3,
+            allocation_note = $4,
+            updated_at = $5
+        WHERE id = $1
+        RETURNING id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+      `,
+      [id, allocated, allocated ? now : null, String(allocationNote || "").trim(), now]
+    );
+
+    return mapDbSubmission(rows[0]);
+  }
+
+  const submissions = await readSubmissions();
+  const index = submissions.findIndex((item) => item.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  const now = new Date().toISOString();
+  const updated = {
+    ...submissions[index],
+    allocated,
+    allocatedAt: allocated ? now : null,
+    allocationNote: String(allocationNote || "").trim(),
+    updatedAt: now
+  };
+
+  submissions[index] = updated;
+  await writeSubmissions(submissions);
+  return updated;
+}
+
+async function initStorage() {
+  if (usePostgres) {
+    await initPostgres();
+    return;
+  }
+
+  await ensureSubmissionsFile();
 }
 
 function isSubmissionFresh(submission) {
@@ -277,7 +462,6 @@ app.post("/customer-codes", async (req, res) => {
   const now = new Date().toISOString();
 
   try {
-    const submissions = await readSubmissions();
     const record = {
       id: `SUB-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
       phone: cleanPhone,
@@ -289,13 +473,7 @@ app.post("/customer-codes", async (req, res) => {
       updatedAt: now
     };
 
-    submissions.push(record);
-
-    if (submissions.length > MAX_SUBMISSIONS_LOGS) {
-      submissions.splice(0, submissions.length - MAX_SUBMISSIONS_LOGS);
-    }
-
-    await writeSubmissions(submissions);
+    await createSubmissionInStorage(record);
     return res.json({ success: true, record });
   } catch (error) {
     console.error("Failed to store customer code:", error.message);
@@ -326,24 +504,11 @@ app.patch("/admin/api/submissions/:id", requireAdminAuth, async (req, res) => {
   }
 
   try {
-    const submissions = await readSubmissions();
-    const index = submissions.findIndex((item) => item.id === id);
+    const updated = await updateSubmissionInStorage(id, allocated, allocationNote);
 
-    if (index === -1) {
+    if (!updated) {
       return res.status(404).json({ success: false, error: "Submission not found" });
     }
-
-    const now = new Date().toISOString();
-    const updated = {
-      ...submissions[index],
-      allocated,
-      allocatedAt: allocated ? now : null,
-      allocationNote: String(allocationNote || "").trim(),
-      updatedAt: now
-    };
-
-    submissions[index] = updated;
-    await writeSubmissions(submissions);
 
     return res.json({ success: true, record: updated });
   } catch (error) {
@@ -381,8 +546,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   let latestSubmission;
   try {
-    const submissions = await readSubmissions();
-    latestSubmission = getLatestSubmissionForPhone(submissions, cleanPhone);
+    latestSubmission = await getLatestSubmissionForPhoneFromStorage(cleanPhone);
   } catch (error) {
     console.error("Failed to read submissions before payment:", error.message);
     return res.status(500).json({ success: false, error: "Could not validate customer code" });
@@ -486,8 +650,9 @@ app.get("/", (req, res) => {
 /* Start server */
 const PORT = process.env.PORT || 4000;
 
-ensureSubmissionsFile()
+initStorage()
   .then(() => {
+    console.log(`Storage engine: ${usePostgres ? "PostgreSQL" : "JSON file"}`);
     app.listen(PORT, () => {
       console.log("Server running on port", PORT);
     });
