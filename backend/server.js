@@ -68,8 +68,22 @@ const paymentLimiter = rateLimit({
 });
 
 /* Helpers */
+function normalizePhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (/^255[67]\d{8}$/.test(digits)) {
+    return `0${digits.slice(3)}`;
+  }
+
+  if (/^[67]\d{8}$/.test(digits)) {
+    return `0${digits}`;
+  }
+
+  return digits;
+}
+
 function isValidTanzanianPhone(phone) {
-  return /^(0[67]\d{8}|255[67]\d{8})$/.test(phone.replace(/\s+/g, ""));
+  return /^0[67]\d{8}$/.test(normalizePhone(phone));
 }
 
 function isValidCustomerCode(code) {
@@ -81,13 +95,12 @@ function normalizeCustomerCode(code) {
 }
 
 function toInternational(phone) {
-  const clean = phone.replace(/\s+/g, "");
-  return clean.startsWith("0") ? "255" + clean.slice(1) : clean;
+  const local = normalizePhone(phone);
+  return local.startsWith("0") ? `255${local.slice(1)}` : local;
 }
 
 function detectChannel(phone) {
-  const clean = phone.replace(/\s+/g, "");
-  const local = clean.startsWith("255") ? `0${clean.slice(3)}` : clean;
+  const local = normalizePhone(phone);
 
   if (local.startsWith("068") || local.startsWith("069") || local.startsWith("078")) {
     return "AIRTEL-MONEY";
@@ -217,7 +230,7 @@ async function getClickPesaAuthToken() {
 app.post("/customer-codes", async (req, res) => {
   const { phone, customerCode } = req.body || {};
 
-  if (!phone || typeof phone !== "string" || !isValidTanzanianPhone(phone.trim())) {
+  if (!phone || typeof phone !== "string" || !isValidTanzanianPhone(phone)) {
     return res.status(400).json({ success: false, error: "Valid phone number is required" });
   }
 
@@ -225,7 +238,7 @@ app.post("/customer-codes", async (req, res) => {
     return res.status(400).json({ success: false, error: "Customer code must be exactly 4 digits" });
   }
 
-  const cleanPhone = phone.trim();
+  const cleanPhone = normalizePhone(phone);
   const normalizedCode = normalizeCustomerCode(customerCode);
   const now = new Date().toISOString();
 
@@ -328,7 +341,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     return res.status(400).json({ success: false, error: "Phone required" });
   }
 
-  const cleanPhone = phone.trim();
+  const cleanPhone = normalizePhone(phone);
 
   if (!isValidTanzanianPhone(cleanPhone)) {
     return res.status(400).json({ success: false, error: "Invalid phone" });

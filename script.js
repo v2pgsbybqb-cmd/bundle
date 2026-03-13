@@ -141,11 +141,25 @@ async function buy() {
 }
 
 function getCurrentPhone() {
-  return phoneInput ? phoneInput.value.trim() : "";
+  return normalizePhone(phoneInput ? phoneInput.value : "");
 }
 
 function isValidPhone(phone) {
-  return /^0[67]\d{8}$/.test(phone);
+  return /^0[67]\d{8}$/.test(normalizePhone(phone));
+}
+
+function normalizePhone(phone) {
+  const digits = String(phone || "").replace(/\D/g, "");
+
+  if (/^255[67]\d{8}$/.test(digits)) {
+    return `0${digits.slice(3)}`;
+  }
+
+  if (/^[67]\d{8}$/.test(digits)) {
+    return `0${digits}`;
+  }
+
+  return digits;
 }
 
 function normalizeCustomerCode(code) {
