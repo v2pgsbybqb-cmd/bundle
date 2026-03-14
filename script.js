@@ -121,9 +121,6 @@ async function buy() {
       lastPromptedPhone = "";
       resetPurchaseState();
       showToast("✅ Payment prompt sent! Check your phone.");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } else {
       showStatus("none");
       showToast("❌ " + (data.error || "Payment failed. Try again."));
@@ -138,6 +135,9 @@ async function buy() {
   } finally {
     clearTimeout(timeoutId);
     updateBuyState();
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
   }
 }
 
