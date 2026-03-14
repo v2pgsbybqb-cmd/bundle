@@ -523,39 +523,6 @@ app.post("/customer-codes", async (req, res) => {
   }
 });
 
-app.get("/stats", async (req, res) => {
-  try {
-    const now = new Date();
-    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-
-    if (usePostgres) {
-      const [totalRes, allocatedRes, todayRes] = await Promise.all([
-        pool.query("SELECT COUNT(*) FROM customer_submissions"),
-        pool.query("SELECT COUNT(*) FROM customer_submissions WHERE allocated = TRUE"),
-        pool.query("SELECT COUNT(*) FROM customer_submissions WHERE code_consumed_at >= $1", [startOfDay])
-      ]);
-      return res.json({
-        success: true,
-        total: Number(totalRes.rows[0].count),
-        allocated: Number(allocatedRes.rows[0].count),
-        soldToday: Number(todayRes.rows[0].count)
-      });
-    }
-
-    const submissions = await readSubmissions();
-    const soldToday = submissions.filter((s) => s.codeConsumedAt && s.codeConsumedAt >= startOfDay).length;
-    return res.json({
-      success: true,
-      total: submissions.length,
-      allocated: submissions.filter((s) => s.allocated).length,
-      soldToday
-    });
-  } catch (error) {
-    console.error("Failed to read stats:", error.message);
-    return res.status(500).json({ success: false, error: "Could not load stats" });
-  }
-});
-
 app.get("/admin/api/submissions", requireAdminAuth, async (req, res) => {
   try {
     const submissions = await readSubmissions();
