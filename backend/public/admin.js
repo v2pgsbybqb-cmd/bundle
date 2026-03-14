@@ -69,6 +69,7 @@ function renderRows(items) {
           <td>${formatDate(item.allocatedAt)}</td>
           <td>
             <textarea class="row-note" data-note-for="${escapeHtml(item.id)}" placeholder="Optional note">${escapeHtml(item.allocationNote)}</textarea>
+            <button class="secondary save-note-btn" style="margin-top:6px;font-size:12px;padding:6px 10px;width:100%;" data-save-note-id="${escapeHtml(String(item.id))}">Save Note</button>
           </td>
           <td>
             <div class="row-actions">
@@ -208,6 +209,16 @@ logoutBtn.addEventListener("click", () => {
 searchInput.addEventListener("input", applySearch);
 
 rowsEl.addEventListener("click", (event) => {
+  const saveNoteBtn = event.target.closest("[data-save-note-id]");
+  if (saveNoteBtn) {
+    const id = saveNoteBtn.dataset.saveNoteId;
+    const item = submissions.find((s) => String(s.id) === String(id));
+    if (item) {
+      updateSubmission(id, item.allocated);
+    }
+    return;
+  }
+
   const button = event.target.closest("[data-toggle-id]");
   if (!button) {
     return;
