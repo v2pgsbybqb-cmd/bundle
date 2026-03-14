@@ -139,7 +139,6 @@ async function fetchSubmissions(options = {}) {
   try {
     const res = await fetch(`/admin/api/submissions?ts=${Date.now()}`, {
       headers: { "x-admin-password": password },
-      cache: "no-store"
     });
 
     const data = await res.json();
