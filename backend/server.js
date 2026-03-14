@@ -50,29 +50,9 @@ app.get("/admin/", (req, res) => {
 
 app.use("/admin", express.static(adminStaticDir, { index: "admin.html" }));
 
-/* Allowed origins */
-const allowedOrigins = [
-  ...(process.env.ALLOWED_ORIGINS || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-  "https://bundle-ls5z.onrender.com",
-  "http://localhost:5500",
-  "http://127.0.0.1:5500"
-];
-
+/* CORS */
 app.use(
   cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      console.log("Blocked origin:", origin);
-      callback(new Error("Not allowed by CORS"));
-    },
     methods: ["GET", "POST", "PATCH"],
     allowedHeaders: ["Content-Type", "x-admin-password"]
   })
