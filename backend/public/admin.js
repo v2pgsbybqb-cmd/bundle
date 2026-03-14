@@ -102,6 +102,11 @@ function startAutoRefresh() {
       return;
     }
 
+    const focused = document.activeElement;
+    if (focused && rowsEl.contains(focused)) {
+      return;
+    }
+
     fetchSubmissions({ silent: true });
   }, AUTO_REFRESH_MS);
 }
