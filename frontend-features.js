@@ -3,25 +3,23 @@ const speed=document.getElementById("networkSpeed")
 const sold=document.getElementById("bundlesSold")
 const load=document.getElementById("networkLoad")
 
-let bundles=1200
+const STATS_BACKEND="https://backend-ut99.onrender.com";
 
-setInterval(()=>{
-users.innerText="Users Online: "+(Math.floor(Math.random()*40)+20)
-},2000)
+async function fetchStats(){
+  try{
+    const res=await fetch(`${STATS_BACKEND}/stats`);
+    if(!res.ok) return;
+    const data=await res.json();
+    if(!data.success) return;
+    if(users) users.innerText=data.total;
+    if(sold) sold.innerText=data.soldToday;
+    if(load) load.innerText=data.allocated;
+    if(speed) speed.innerText="Live";
+  }catch(e){}
+}
 
-setInterval(()=>{
-speed.innerText="Network Speed: "+(Math.floor(Math.random()*100)+20)+" Mbps"
-},2000)
-
-setInterval(()=>{
-bundles+=Math.floor(Math.random()*3)
-sold.innerText="Bundles Today: "+bundles
-},3000)
-
-setInterval(()=>{
-const percent=Math.floor(Math.random()*40)+60
-load.innerText="Network Load: "+percent+"%"
-},2000)
+fetchStats();
+setInterval(fetchStats,10000);
 
 
 
