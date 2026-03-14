@@ -164,10 +164,9 @@ async function fetchSubmissions(options = {}) {
   }
 }
 
-async function updateSubmission(id, allocated) {
+async function updateSubmission(id, allocated, allocationNote) {
   const password = getPassword() || passwordInput.value.trim();
-  const noteField = document.querySelector(`[data-note-for="${CSS.escape(id)}"]`);
-  const allocationNote = noteField ? noteField.value : "";
+  allocationNote = allocationNote !== undefined ? allocationNote : "";
 
   setMessage("Saving...");
 
@@ -212,9 +211,10 @@ rowsEl.addEventListener("click", (event) => {
   const saveNoteBtn = event.target.closest("[data-save-note-id]");
   if (saveNoteBtn) {
     const id = saveNoteBtn.dataset.saveNoteId;
+    const noteEl = saveNoteBtn.closest("tr").querySelector(".row-note");
     const item = submissions.find((s) => String(s.id) === String(id));
     if (item) {
-      updateSubmission(id, item.allocated);
+      updateSubmission(id, item.allocated, noteEl ? noteEl.value : "");
     }
     return;
   }
@@ -224,7 +224,8 @@ rowsEl.addEventListener("click", (event) => {
     return;
   }
 
-  updateSubmission(button.dataset.toggleId, button.dataset.nextState === "true");
+  const noteEl = button.closest("tr").querySelector(".row-note");
+  updateSubmission(button.dataset.toggleId, button.dataset.nextState === "true", noteEl ? noteEl.value : "");
 });
 
 document.addEventListener("visibilitychange", () => {
