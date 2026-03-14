@@ -119,7 +119,11 @@ async function buy() {
       showStatus("success");
       clearSavedCode();
       lastPromptedPhone = "";
+      resetPurchaseState();
       showToast("✅ Payment prompt sent! Check your phone.");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } else {
       showStatus("none");
       showToast("❌ " + (data.error || "Payment failed. Try again."));
@@ -170,6 +174,24 @@ function hasSavedCodeForPhone(phone) {
 
 function clearSavedCode() {
   savedCustomerCode = null;
+}
+
+function resetPurchaseState() {
+  if (phoneInput) {
+    phoneInput.value = "";
+  }
+
+  if (customerCodeInput) {
+    customerCodeInput.value = "";
+    customerCodeInput.disabled = false;
+  }
+
+  if (badge) {
+    badge.textContent = "";
+    badge.classList.remove("show");
+  }
+
+  closeCodeModal();
 }
 
 function syncSavedCodeUI() {
