@@ -15,6 +15,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "change-me-admin";
 const MAX_SUBMISSIONS_LOGS = Number(process.env.MAX_SUBMISSIONS_LOGS || 50000);
 const CUSTOMER_CODE_VALIDITY_MINUTES = Number(process.env.CUSTOMER_CODE_VALIDITY_MINUTES || 30);
 const usePostgres = Boolean(process.env.DATABASE_URL);
+const requireDatabaseInProduction = String(process.env.REQUIRE_DATABASE_IN_PRODUCTION || "true") === "true";
 
 const pool = usePostgres
   ? new Pool({
@@ -27,6 +28,11 @@ app.set("trust proxy", 1);
 
 if (!process.env.ADMIN_PASSWORD) {
   console.warn("ADMIN_PASSWORD is not set. Using insecure default password: change-me-admin");
+}
+
+if (process.env.NODE_ENV === "production" && requireDatabaseInProduction && !usePostgres) {
+  console.error("DATABASE_URL is required in production. Refusing to start with ephemeral JSON storage.");
+  process.exit(1);
 }
 
 /* Security */
@@ -702,7 +708,11 @@ app.post("/webhook/clickpesa", (req, res) => {
 
 /* Health */
 app.get("/", (req, res) => {
-  res.json({ status: "ok" });
+  res.json({
+    status: "ok",
+    storage: usePostgres ? "postgres" : "json-file",
+    requireDatabaseInProduction
+  });
 });
 
 /* Start server */
