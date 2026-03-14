@@ -203,6 +203,14 @@ body::after {
   text-shadow: 0 0 10px rgba(255, 60, 60, 0.6);
 }
 
+.original-price {
+  text-decoration: line-through;
+  color: rgba(255, 180, 180, 0.55);
+  font-weight: 500;
+  font-size: 0.9em;
+  margin-right: 2px;
+}
+
 .supported-networks {
   width: 100%;
   max-width: 620px;
