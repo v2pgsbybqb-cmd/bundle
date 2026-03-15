@@ -1199,12 +1199,8 @@ body::after {
   }
 
   .offer-badge {
-    width: 100%;
-    max-width: 330px;
-    border-radius: 14px;
     font-size: 13px;
-    line-height: 1.35;
-    padding: 9px 12px;
+    padding: 9px 14px;
   }
 
   .supported-title {
@@ -1212,22 +1208,37 @@ body::after {
   }
 
   .network-logos {
-    grid-template-columns: 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
   }
 
   .network-item {
     min-width: 0;
-    padding: 6px 8px;
+    padding: 7px 6px;
+    gap: 5px;
   }
 
   .network-item img {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
   }
 
   .network-item span {
     font-size: 11px;
+  }
+
+  /* countdown compact on small screens */
+  .cd-block {
+    min-width: 42px;
+    padding: 6px 10px;
+  }
+
+  .cd-block span {
+    font-size: 18px;
+  }
+
+  .cd-sep {
+    font-size: 18px;
   }
 
   .section-title { font-size: 26px; }
@@ -1248,7 +1259,7 @@ body::after {
   }
 
   .code-modal-dialog h3 {
-    font-size: 24px;
+    font-size: 17px;
   }
 
   .code-modal-actions {
