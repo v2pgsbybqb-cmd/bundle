@@ -397,3 +397,38 @@ setTimeout(() => {
   setInterval(fakePurchase, rnd(7000, 12000));
 }, 6000);
 
+/* ── COUNTDOWN TIMER ─────────────────────────────────────── */
+(function () {
+  const pad = (n) => String(n).padStart(2, "0");
+
+  function getNextDeadline() {
+    const now   = new Date();
+    const year  = now.getFullYear();
+    const month = now.getMonth();
+    // End of current month at 23:59:59 EAT (UTC+3 = UTC+0 -3h => 20:59:59 UTC)
+    const eom = new Date(Date.UTC(year, month + 1, 0, 20, 59, 59));
+    return eom > now ? eom : new Date(Date.UTC(year, month + 2, 0, 20, 59, 59));
+  }
+
+  const daysEl  = document.getElementById("cd-days");
+  const hoursEl = document.getElementById("cd-hours");
+  const minsEl  = document.getElementById("cd-mins");
+  const secsEl  = document.getElementById("cd-secs");
+
+  if (!daysEl) return;
+
+  let deadline = getNextDeadline();
+
+  function tick() {
+    let diff = Math.max(0, deadline - Date.now());
+    if (diff === 0) { deadline = getNextDeadline(); diff = Math.max(0, deadline - Date.now()); }
+    const s = Math.floor(diff / 1000);
+    daysEl.textContent  = pad(Math.floor(s / 86400));
+    hoursEl.textContent = pad(Math.floor((s % 86400) / 3600));
+    minsEl.textContent  = pad(Math.floor((s % 3600) / 60));
+    secsEl.textContent  = pad(s % 60);
+  }
+
+  tick();
+  setInterval(tick, 1000);
+})();

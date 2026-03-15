@@ -211,6 +211,83 @@ body::after {
   margin-right: 2px;
 }
 
+/* ── COUNTDOWN TIMER ──────────────────────────────────────── */
+.countdown-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto 22px;
+}
+
+.countdown-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 200, 200, 0.75);
+}
+
+.countdown-blocks {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 30, 30, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  border-radius: 10px;
+  padding: 8px 14px;
+  min-width: 52px;
+  box-shadow: 0 0 12px rgba(255, 35, 35, 0.18);
+}
+
+.cd-block span {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+
+.cd-block small {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 180, 180, 0.65);
+}
+
+.cd-sep {
+  font-size: 22px;
+  font-weight: 900;
+  color: rgba(255, 100, 100, 0.55);
+  margin-bottom: 14px;
+  animation: cdBlink 1s step-end infinite;
+}
+
+@keyframes cdBlink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+/* pulse the seconds block to show it's live */
+#cd-secs {
+  animation: cdSecPop 1s ease-out infinite;
+}
+
+@keyframes cdSecPop {
+  0%   { transform: scale(1.12); color: #ff8080; }
+  20%  { transform: scale(1);    color: #fff;    }
+  100% { transform: scale(1);    color: #fff;    }
+}
+
 .supported-networks {
   width: 100%;
   max-width: 620px;
