@@ -405,9 +405,10 @@ setTimeout(() => {
     const now   = new Date();
     const year  = now.getFullYear();
     const month = now.getMonth();
-    // End of current month at 23:59:59 EAT (UTC+3 = UTC+0 -3h => 20:59:59 UTC)
-    const eom = new Date(Date.UTC(year, month + 1, 0, 20, 59, 59));
-    return eom > now ? eom : new Date(Date.UTC(year, month + 2, 0, 20, 59, 59));
+    const day   = now.getDate();
+    // 23:59:59 EAT = 20:59:59 UTC
+    const eod = new Date(Date.UTC(year, month, day, 20, 59, 59));
+    return eod > now ? eod : new Date(Date.UTC(year, month, day + 1, 20, 59, 59));
   }
 
   const daysEl  = document.getElementById("cd-days");
