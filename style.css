@@ -501,9 +501,9 @@ body::after {
 }
 
 .code-modal-dialog h3 {
-  font-size: 28px;
-  line-height: 1.15;
-  margin-bottom: 12px;
+  font-size: 20px;
+  line-height: 1.35;
+  margin-bottom: 16px;
 }
 
 .code-modal-text {
