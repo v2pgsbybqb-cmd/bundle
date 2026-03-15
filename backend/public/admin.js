@@ -82,6 +82,33 @@ function renderRows(items) {
     .join("");
 }
 
+function deduplicateSubmissions(items) {
+  const map = new Map();
+
+  for (const item of items) {
+    const key = `${item.phone}||${item.customerCode}`;
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, { ...item });
+    } else {
+      // Prefer allocated; otherwise keep the newer one
+      if (item.allocated && !existing.allocated) {
+        map.set(key, { ...item });
+      } else if (!item.allocated && !existing.allocated) {
+        // Both pending — keep the more recent
+        const existingDate = new Date(existing.createdAt || 0);
+        const itemDate    = new Date(item.createdAt    || 0);
+        if (itemDate > existingDate) {
+          map.set(key, { ...item });
+        }
+      }
+    }
+  }
+
+  return Array.from(map.values());
+}
+
 function applySearch() {
   const query = searchInput.value.trim().toLowerCase();
   const filtered = !query
@@ -90,8 +117,9 @@ function applySearch() {
         return item.phone.toLowerCase().includes(query) || item.customerCode.toLowerCase().includes(query);
       });
 
-  renderStats(filtered);
-  renderRows(filtered);
+  const deduplicated = deduplicateSubmissions(filtered);
+  renderStats(deduplicated);
+  renderRows(deduplicated);
 }
 
 function startAutoRefresh() {
