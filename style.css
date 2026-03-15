@@ -291,6 +291,15 @@ body::after {
   100% { transform: scale(1);    color: #fff;    }
 }
 
+.validity-note {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(0, 230, 118, 0.8);
+  letter-spacing: 0.4px;
+  margin: 10px auto 20px;
+  text-align: center;
+}
+
 .supported-networks {
   width: 100%;
   max-width: 620px;
