@@ -466,25 +466,37 @@ async function getClickPesaAuthToken() {
     return cachedBearerToken;
   }
 
-  const tokenResponse = await clickPesaApi.post(
-    "https://api.clickpesa.com/third-parties/generate-token",
-    {},
-    {
-      headers: {
-        "client-id": process.env.CLICKPESA_CLIENT_ID,
-        "api-key": process.env.CLICKPESA_API_KEY
+  console.log("Fetching new ClickPesa token with CLIENT_ID:", process.env.CLICKPESA_CLIENT_ID);
+
+  try {
+    const tokenResponse = await clickPesaApi.post(
+      "https://api.clickpesa.com/third-parties/generate-token",
+      {},
+      {
+        headers: {
+          "client-id": process.env.CLICKPESA_CLIENT_ID,
+          "api-key": process.env.CLICKPESA_API_KEY
+        }
       }
-    }
-  );
+    );
 
-  const token = tokenResponse.data.token;
-  const bearerToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
+    console.log("Token generation HTTP status:", tokenResponse.status);
+    const token = tokenResponse.data.token;
+    const bearerToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
 
-  cachedBearerToken = bearerToken;
-  cachedTokenExpiryMs = getTokenExpiryMs(bearerToken) || now + 10 * 60 * 1000;
+    cachedBearerToken = bearerToken;
+    cachedTokenExpiryMs = getTokenExpiryMs(bearerToken) || now + 10 * 60 * 1000;
+    console.log("Token cached, expires at:", new Date(cachedTokenExpiryMs).toISOString());
 
-  return cachedBearerToken;
+    return cachedBearerToken;
+  } catch (err) {
+    console.error("Token generation FAILED — status:", err.response?.status);
+    console.error("Token generation error body:", JSON.stringify(err.response?.data));
+    console.error("Token generation error message:", err.message);
+    throw new Error(`ClickPesa token generation failed: ${err.response?.data?.message || err.message}`);
+  }
 }
+
 
 app.post("/customer-codes", async (req, res) => {
   const { phone, customerCode } = req.body || {};
