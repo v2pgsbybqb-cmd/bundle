@@ -567,9 +567,10 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     },
     phone_number: cleanPhone,
     customer: {
-      firstname: "BundleTZ",
-      lastname: "Customer",
-      email: "pay@bundletz.com"
+      firstname: cleanPhone,
+      lastname: "–",
+      email: `${cleanPhone}@bundletz.com`,
+      phone: cleanPhone
     }
   };
 
