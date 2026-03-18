@@ -429,7 +429,7 @@ const SNIPPE_API_KEY = process.env.SNIPPE_API_KEY;
 const SNIPPE_TIMEOUT_MS = Number(process.env.SNIPPE_TIMEOUT_MS || 15000);
 
 const snippeApi = axios.create({
-  baseURL: "https://api.snippe.sh",
+  baseURL: "https://api.snippe.sh/api/v1",
   timeout: SNIPPE_TIMEOUT_MS
 });
 
@@ -558,22 +558,26 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   }
 
   const orderId = makeTxRef();
-  const intlPhone = toInternational(cleanPhone);
 
   const payload = {
-    type: "mobile",
-    amount: parsedAmount,
-    currency: "TZS",
-    phone: intlPhone,
-    reference: orderId,
-    description: "23GB Bundle – BundleTZ"
+    payment_type: "mobile",
+    details: {
+      amount: parsedAmount,
+      currency: "TZS"
+    },
+    phone_number: cleanPhone,
+    customer: {
+      firstname: "BundleTZ",
+      lastname: "Customer",
+      email: "pay@bundletz.com"
+    }
   };
 
   console.log("Sending to Snippe:", JSON.stringify(payload));
 
   try {
     const { data, status: httpStatus } = await snippeApi.post(
-      "/v1/payments",
+      "/payments",
       payload,
       {
         headers: {
@@ -588,7 +592,9 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     console.log("Snippe response payload:", JSON.stringify(data));
     console.log("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
-    if (data.status === "success") {
+    // Mobile money is async — API returns status "pending" on success
+    const paymentData = data.data || data;
+    if (data.status === "success" && paymentData.reference) {
       await consumeSubmissionCodeInStorage(latestSubmission.id, orderId);
 
       return res.json({
