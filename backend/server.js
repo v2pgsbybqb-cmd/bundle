@@ -425,76 +425,16 @@ function requireAdminAuth(req, res, next) {
   next();
 }
 
-const hasStaticToken = Boolean(process.env.CLICKPESA_TOKEN);
-const hasClientCredentials = Boolean(process.env.CLICKPESA_CLIENT_ID && process.env.CLICKPESA_API_KEY);
-const CLICKPESA_TIMEOUT_MS = Number(process.env.CLICKPESA_TIMEOUT_MS || 15000);
+const SNIPPE_API_KEY = process.env.SNIPPE_API_KEY;
+const SNIPPE_TIMEOUT_MS = Number(process.env.SNIPPE_TIMEOUT_MS || 15000);
 
-const clickPesaApi = axios.create({ timeout: CLICKPESA_TIMEOUT_MS });
+const snippeApi = axios.create({
+  baseURL: "https://api.snippe.sh",
+  timeout: SNIPPE_TIMEOUT_MS
+});
 
-let cachedBearerToken = null;
-let cachedTokenExpiryMs = 0;
-
-if (!hasStaticToken && !hasClientCredentials) {
-  console.warn("Missing ClickPesa auth config. Set CLICKPESA_TOKEN or both CLICKPESA_CLIENT_ID and CLICKPESA_API_KEY.");
-}
-
-function getTokenExpiryMs(token) {
-  try {
-    const jwt = token.startsWith("Bearer ") ? token.slice(7) : token;
-    const payloadBase64 = jwt.split(".")[1];
-    if (!payloadBase64) return 0;
-
-    const payloadJson = Buffer.from(payloadBase64, "base64url").toString("utf8");
-    const payload = JSON.parse(payloadJson);
-
-    if (!payload.exp) return 0;
-    return payload.exp * 1000;
-  } catch {
-    return 0;
-  }
-}
-
-async function getClickPesaAuthToken() {
-  if (process.env.CLICKPESA_TOKEN) {
-    return process.env.CLICKPESA_TOKEN.startsWith("Bearer ")
-      ? process.env.CLICKPESA_TOKEN
-      : `Bearer ${process.env.CLICKPESA_TOKEN}`;
-  }
-
-  const now = Date.now();
-  if (cachedBearerToken && now < cachedTokenExpiryMs - 30_000) {
-    return cachedBearerToken;
-  }
-
-  console.log("Fetching new ClickPesa token with CLIENT_ID:", process.env.CLICKPESA_CLIENT_ID);
-
-  try {
-    const tokenResponse = await clickPesaApi.post(
-      "https://api.clickpesa.com/third-parties/generate-token",
-      {},
-      {
-        headers: {
-          "client-id": process.env.CLICKPESA_CLIENT_ID,
-          "api-key": process.env.CLICKPESA_API_KEY
-        }
-      }
-    );
-
-    console.log("Token generation HTTP status:", tokenResponse.status);
-    const token = tokenResponse.data.token;
-    const bearerToken = token && token.startsWith("Bearer ") ? token : `Bearer ${token}`;
-
-    cachedBearerToken = bearerToken;
-    cachedTokenExpiryMs = getTokenExpiryMs(bearerToken) || now + 10 * 60 * 1000;
-    console.log("Token cached, expires at:", new Date(cachedTokenExpiryMs).toISOString());
-
-    return cachedBearerToken;
-  } catch (err) {
-    console.error("Token generation FAILED — status:", err.response?.status);
-    console.error("Token generation error body:", JSON.stringify(err.response?.data));
-    console.error("Token generation error message:", err.message);
-    throw new Error(`ClickPesa token generation failed: ${err.response?.data?.message || err.message}`);
-  }
+if (!SNIPPE_API_KEY) {
+  console.warn("Missing Snippe auth config. Set SNIPPE_API_KEY in your environment.");
 }
 
 
@@ -576,7 +516,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   const { phone, amount } = req.body;
   const requestStartedAt = Date.now();
 
-  if (!hasStaticToken && !hasClientCredentials) {
+  if (!SNIPPE_API_KEY) {
     return res.status(500).json({
       success: false,
       error: "Server payment configuration is incomplete."
@@ -619,51 +559,36 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 
   const orderId = makeTxRef();
   const intlPhone = toInternational(cleanPhone);
-  const channel = "MOBILE-MONEY";
 
   const payload = {
+    type: "mobile",
     amount: parsedAmount,
     currency: "TZS",
-    orderReference: orderId,
-    phoneNumber: intlPhone,
-    channel
+    phone: intlPhone,
+    reference: orderId,
+    description: "23GB Bundle – BundleTZ"
   };
 
-  console.log("Sending to ClickPesa:", JSON.stringify(payload));
+  console.log("Sending to Snippe:", JSON.stringify(payload));
 
   try {
-    const authToken = await getClickPesaAuthToken();
-    const { data, status: httpStatus } = await clickPesaApi.post(
-      "https://api.clickpesa.com/third-parties/payments/initiate-ussd-push-request",
+    const { data, status: httpStatus } = await snippeApi.post(
+      "/v1/payments",
       payload,
       {
         headers: {
-          Authorization: authToken,
-          "Content-Type": "application/json"
+          Authorization: `Bearer ${SNIPPE_API_KEY}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": orderId
         }
       }
     );
 
-    console.log("ClickPesa HTTP status:", httpStatus);
-    console.log("ClickPesa response payload:", JSON.stringify(data));
+    console.log("Snippe HTTP status:", httpStatus);
+    console.log("Snippe response payload:", JSON.stringify(data));
     console.log("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
-    const isHealthCheck = data.version && data.status === "up";
-    if (isHealthCheck) {
-      console.error("ClickPesa returned health-check - payload or endpoint rejected");
-      return res.status(400).json({ success: false, error: "Payment gateway rejected the request." });
-    }
-
-    const isEchoSuccess = data.status === "PROCESSING" || data.id;
-
-    if (
-      data.status === "PENDING" ||
-      data.status === "SUCCESS" ||
-      data.status === "success" ||
-      data.message?.toLowerCase().includes("success") ||
-      data.message?.toLowerCase().includes("pending") ||
-      isEchoSuccess
-    ) {
+    if (data.status === "success") {
       await consumeSubmissionCodeInStorage(latestSubmission.id, orderId);
 
       return res.json({
@@ -673,16 +598,16 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       });
     }
 
-    console.error("ClickPesa non-success response:", JSON.stringify(data));
+    console.error("Snippe non-success response:", JSON.stringify(data));
     return res.status(400).json({
       success: false,
       error: data.message || data.error || "Payment could not be initiated"
     });
   } catch (err) {
     const errBody = err.response?.data;
-    console.error("ClickPesa HTTP error status:", err.response?.status);
-    console.error("ClickPesa error body:", JSON.stringify(errBody));
-    console.error("ClickPesa error message:", err.message);
+    console.error("Snippe HTTP error status:", err.response?.status);
+    console.error("Snippe error body:", JSON.stringify(errBody));
+    console.error("Snippe error message:", err.message);
     console.error("Create-payment duration(ms):", Date.now() - requestStartedAt);
 
     return res.status(500).json({
@@ -693,8 +618,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 });
 
 /* Webhook */
-app.post("/webhook/clickpesa", (req, res) => {
-  console.log("Webhook event:", req.body);
+app.post("/webhook/snippe", (req, res) => {
+  console.log("Snippe webhook event:", req.body);
   res.status(200).end();
 });
 
