@@ -105,7 +105,7 @@ async function buy() {
     const res = await fetch(`${BACKEND}/create-payment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone, amount: 3000 }),
+      body: JSON.stringify({ phone, amount: 3015 }),
       signal: controller.signal
     });
 
