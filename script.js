@@ -16,6 +16,7 @@ const networkColors = {
   halotel: { bg: "rgba(0,180,120,.2)", text: "#00e676", label: "HALOTEL" },
   yas:     { bg: "rgba(255,180,0,.2)",  text: "#ffd600", label: "YAS"     },
   airtel:  { bg: "rgba(255,60,0,.2)",   text: "#ff6b00", label: "AIRTEL"  },
+  vodacom: { bg: "rgba(255,0,0,.2)",    text: "#ff0000", label: "VODACOM" },
 };
 
 let savedCustomerCode = null;
@@ -322,10 +323,12 @@ function handlePhoneInput() {
 
   if (num.startsWith("061") || num.startsWith("062") || num.startsWith("063")) {
     detected = "halotel";
-  } else if (num.startsWith("074") || num.startsWith("075") || num.startsWith("076")) {
+  } else if (num.startsWith("065") || num.startsWith("067") || num.startsWith("071") || num.startsWith("077")) {
     detected = "yas";
   } else if (num.startsWith("068") || num.startsWith("069") || num.startsWith("078")) {
     detected = "airtel";
+  } else if (num.startsWith("074") || num.startsWith("075") || num.startsWith("076")) {
+    detected = "vodacom";
   }
 
   cards.forEach((card) => {

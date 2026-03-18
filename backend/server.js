@@ -108,8 +108,12 @@ function detectChannel(phone) {
     return "AIRTEL-MONEY";
   }
 
-  if (local.startsWith("074") || local.startsWith("075") || local.startsWith("076")) {
+  if (local.startsWith("065") || local.startsWith("067") || local.startsWith("071") || local.startsWith("077")) {
     return "TIGO-PESA";
+  }
+
+  if (local.startsWith("074") || local.startsWith("075") || local.startsWith("076")) {
+    return "M-PESA";
   }
 
   if (local.startsWith("061") || local.startsWith("062") || local.startsWith("063")) {
