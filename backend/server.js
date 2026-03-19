@@ -587,7 +587,8 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
       lastname: "–",
       email: `${cleanPhone}@bundletz.com`,
       phone: cleanPhone
-    }
+    },
+    webhook_url: "https://backend-ut99.onrender.com/webhook/snippe"
   };
 
   console.log("Sending to Snippe:", JSON.stringify(payload));
