@@ -7,6 +7,7 @@ const axios = require("axios");
 const fs = require("fs/promises");
 const path = require("path");
 const { Pool } = require("pg");
+const crypto = require("crypto");
 
 const app = express();
 const submissionsFile = path.join(__dirname, "data", "customer-submissions.json");
@@ -37,7 +38,14 @@ if (process.env.NODE_ENV === "production" && requireDatabaseInProduction && !use
 
 /* Security */
 app.use(helmet());
-app.use(express.json({ limit: "10kb" }));
+app.use(express.json({
+  limit: "10kb",
+  verify: (req, res, buf) => {
+    if (req.originalUrl.startsWith("/webhook")) {
+      req.rawBody = buf.toString("utf8");
+    }
+  }
+}));
 
 /* Serve admin panel (static files, not affected by CORS) */
 app.get("/admin", (req, res) => {
@@ -632,22 +640,52 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
   }
 });
 
+/* Webhook verification */
+function verifyWebhookSignature(payload, signature, secret) {
+  if (!signature || !secret || !payload) return false;
+  try {
+    const expectedSignature = crypto
+      .createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
+    return crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
 /* Webhook */
 app.post("/webhook/snippe", async (req, res) => {
   console.log("Snippe webhook event:", JSON.stringify(req.body));
   
-  if (req.body.event === "payment.completed" && req.body.reference) {
+  const secret = process.env.SNIPPE_WEBHOOK_SECRET;
+  const signature = req.headers["x-webhook-signature"];
+
+  if (secret) {
+    if (!verifyWebhookSignature(req.rawBody, signature, secret)) {
+      console.warn("Invalid Snippe webhook signature detected. Ignored.");
+      return res.status(401).send("Invalid signature");
+    }
+  }
+
+  const { type, data } = req.body || {};
+  
+  if (type === "payment.completed" && data && data.status === "completed" && data.reference) {
+    const reference = data.reference;
     try {
       if (usePostgres) {
         await pool.query(
           "UPDATE customer_submissions SET payment_completed_at = CURRENT_TIMESTAMP WHERE payment_order_id = $1",
-          [req.body.reference]
+          [reference]
         );
       } else {
         const submissions = await readSubmissions();
         let changed = false;
         for (const sub of submissions) {
-          if (sub.paymentOrderId === req.body.reference && !sub.paymentCompletedAt) {
+          if (sub.paymentOrderId === reference && !sub.paymentCompletedAt) {
             sub.paymentCompletedAt = new Date().toISOString();
             changed = true;
           }
@@ -656,7 +694,7 @@ app.post("/webhook/snippe", async (req, res) => {
           await writeSubmissions(submissions);
         }
       }
-      console.log(`Payment mapped as complete for ref ${req.body.reference}`);
+      console.log(`Payment mapped as complete for ref ${reference}`);
     } catch (err) {
       console.error("Failed to update payment status from Snippe webhook:", err.message);
     }
