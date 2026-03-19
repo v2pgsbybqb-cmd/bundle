@@ -182,6 +182,16 @@
       color: var(--accent);
     }
 
+    .status-paid {
+      background: rgba(0, 230, 118, 0.12);
+      color: #00e676;
+    }
+
+    .status-unpaid {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--muted);
+    }
+
     .row-note {
       width: 200px;
       min-height: 76px;
@@ -250,6 +260,10 @@
         <strong id="pendingCount">0</strong>
       </div>
       <div class="panel stat-card">
+        <span class="muted">Paid</span>
+        <strong id="paidCount">0</strong>
+      </div>
+      <div class="panel stat-card">
         <span class="muted">Allocated</span>
         <strong id="allocatedCount">0</strong>
       </div>
@@ -267,6 +281,7 @@
             <tr>
               <th>Phone</th>
               <th>Customer Code</th>
+              <th>Payment</th>
               <th>Status</th>
               <th>Saved</th>
               <th>Allocated At</th>
@@ -276,7 +291,7 @@
           </thead>
           <tbody id="rows">
             <tr>
-              <td colspan="7" class="muted">Enter the admin password to load submissions.</td>
+              <td colspan="8" class="muted">Enter the admin password to load submissions.</td>
             </tr>
           </tbody>
         </table>

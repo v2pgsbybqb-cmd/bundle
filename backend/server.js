@@ -143,6 +143,7 @@ function mapDbSubmission(row) {
     allocationNote: row.allocation_note,
     codeConsumedAt: row.code_consumed_at,
     paymentOrderId: row.payment_order_id,
+    paymentCompletedAt: row.payment_completed_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -166,6 +167,7 @@ async function initPostgres() {
 
   await pool.query("ALTER TABLE customer_submissions ADD COLUMN IF NOT EXISTS code_consumed_at TIMESTAMPTZ NULL");
   await pool.query("ALTER TABLE customer_submissions ADD COLUMN IF NOT EXISTS payment_order_id TEXT NULL");
+  await pool.query("ALTER TABLE customer_submissions ADD COLUMN IF NOT EXISTS payment_completed_at TIMESTAMPTZ NULL");
 
   await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_phone ON customer_submissions(phone)");
   await pool.query("CREATE INDEX IF NOT EXISTS idx_customer_submissions_updated_at ON customer_submissions(updated_at DESC)");
@@ -259,7 +261,7 @@ async function getLatestSubmissionForPhoneFromStorage(phone) {
     const normalizedPhone = normalizePhone(phone);
     const { rows } = await pool.query(
       `
-        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at
+        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, payment_completed_at, created_at, updated_at
         FROM customer_submissions
         WHERE phone = $1
           AND code_consumed_at IS NULL
@@ -286,9 +288,9 @@ async function createSubmissionInStorage(record) {
     await pool.query(
       `
         INSERT INTO customer_submissions
-          (id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at)
+          (id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, payment_completed_at, created_at, updated_at)
         VALUES
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       `,
       [
         record.id,
@@ -299,6 +301,7 @@ async function createSubmissionInStorage(record) {
         record.allocationNote,
         record.codeConsumedAt,
         record.paymentOrderId,
+        record.paymentCompletedAt,
         record.createdAt,
         record.updatedAt
       ]
@@ -330,7 +333,7 @@ async function updateSubmissionInStorage(id, allocated, allocationNote) {
             allocation_note = $4,
             updated_at = $5
         WHERE id = $1
-        RETURNING id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, created_at, updated_at
+        RETURNING id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, payment_completed_at, created_at, updated_at
       `,
       [id, allocated, allocated ? now : null, String(allocationNote || "").trim(), now]
     );
@@ -467,6 +470,7 @@ app.post("/customer-codes", async (req, res) => {
       allocationNote: "",
       codeConsumedAt: null,
       paymentOrderId: null,
+      paymentCompletedAt: null,
       createdAt: now,
       updatedAt: now
     };
@@ -629,8 +633,35 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
 });
 
 /* Webhook */
-app.post("/webhook/snippe", (req, res) => {
-  console.log("Snippe webhook event:", req.body);
+app.post("/webhook/snippe", async (req, res) => {
+  console.log("Snippe webhook event:", JSON.stringify(req.body));
+  
+  if (req.body.event === "payment.completed" && req.body.reference) {
+    try {
+      if (usePostgres) {
+        await pool.query(
+          "UPDATE customer_submissions SET payment_completed_at = CURRENT_TIMESTAMP WHERE payment_order_id = $1",
+          [req.body.reference]
+        );
+      } else {
+        const submissions = await readSubmissions();
+        let changed = false;
+        for (const sub of submissions) {
+          if (sub.paymentOrderId === req.body.reference && !sub.paymentCompletedAt) {
+            sub.paymentCompletedAt = new Date().toISOString();
+            changed = true;
+          }
+        }
+        if (changed) {
+          await writeSubmissions(submissions);
+        }
+      }
+      console.log(`Payment mapped as complete for ref ${req.body.reference}`);
+    } catch (err) {
+      console.error("Failed to update payment status from Snippe webhook:", err.message);
+    }
+  }
+
   res.status(200).end();
 });
 

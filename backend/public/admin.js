@@ -10,6 +10,7 @@ const searchInput = document.getElementById("search");
 const totalCountEl = document.getElementById("totalCount");
 const pendingCountEl = document.getElementById("pendingCount");
 const allocatedCountEl = document.getElementById("allocatedCount");
+const paidCountEl = document.getElementById("paidCount");
 const AUTO_REFRESH_MS = 5000;
 
 let submissions = [];
@@ -43,6 +44,7 @@ function escapeHtml(value) {
 
 function renderStats(items) {
   totalCountEl.textContent = items.length;
+  if (paidCountEl) paidCountEl.textContent = items.filter((item) => item.paymentCompletedAt).length;
   pendingCountEl.textContent = items.filter((item) => !item.allocated).length;
   allocatedCountEl.textContent = items.filter((item) => item.allocated).length;
 }
@@ -59,11 +61,15 @@ function renderRows(items) {
       const statusText = item.allocated ? "Allocated" : "Pending";
       const buttonClass = item.allocated ? "secondary" : "primary";
       const buttonText = item.allocated ? "Mark Pending" : "Mark Allocated";
+      
+      const paymentClass = item.paymentCompletedAt ? "status-paid" : "status-unpaid";
+      const paymentText = item.paymentCompletedAt ? "Paid" : "Unpaid";
 
       return `
         <tr>
           <td>${escapeHtml(item.phone)}</td>
           <td><strong>${escapeHtml(item.customerCode)}</strong></td>
+          <td><span class="status-pill ${paymentClass}">${paymentText}</span></td>
           <td><span class="status-pill ${statusClass}">${statusText}</span></td>
           <td>${formatDate(item.createdAt)}</td>
           <td>${formatDate(item.allocatedAt)}</td>
@@ -233,7 +239,7 @@ logoutBtn.addEventListener("click", () => {
   passwordInput.value = "";
   submissions = [];
   renderStats([]);
-  rowsEl.innerHTML = '<tr><td colspan="7" class="muted">Enter the admin password to load submissions.</td></tr>';
+  rowsEl.innerHTML = '<tr><td colspan="8" class="muted">Enter the admin password to load submissions.</td></tr>';
   setMessage("Password cleared.");
 });
 
