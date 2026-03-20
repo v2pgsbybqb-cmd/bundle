@@ -217,7 +217,7 @@ async function readSubmissions() {
   if (usePostgres) {
     const { rows } = await pool.query(
       `
-        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, created_at, updated_at
+        SELECT id, phone, customer_code, allocated, allocated_at, allocation_note, code_consumed_at, payment_order_id, payment_completed_at, created_at, updated_at
         FROM customer_submissions
         ORDER BY updated_at DESC
       `
