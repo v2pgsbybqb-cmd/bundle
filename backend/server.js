@@ -491,6 +491,16 @@ app.post("/customer-codes", async (req, res) => {
   }
 });
 
+app.get("/debug-db", async (req, res) => {
+  try {
+    if (!usePostgres) return res.json({ error: "Not using Postgres" });
+    const { rows } = await pool.query("SELECT id, phone, customer_code, payment_order_id, payment_completed_at, created_at, updated_at FROM customer_submissions ORDER BY updated_at DESC LIMIT 5");
+    return res.json({ success: true, count: rows.length, rows });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/admin/api/submissions", requireAdminAuth, async (req, res) => {
   try {
     const submissions = await readSubmissions();
