@@ -613,7 +613,7 @@ app.post("/create-payment", paymentLimiter, async (req, res) => {
     // Mobile money is async — API returns status "pending" on success
     const paymentData = data.data || data;
     if (data.status === "success" && paymentData.reference) {
-      await consumeSubmissionCodeInStorage(latestSubmission.id, orderId);
+      await consumeSubmissionCodeInStorage(latestSubmission.id, paymentData.reference);
 
       return res.json({
         success: true,
